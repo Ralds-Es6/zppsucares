@@ -1,0 +1,66 @@
+import { Request, Response } from 'express';
+
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'meta-llama/llama-3-8b-instruct:free';
+
+/**
+ * @desc    Main Chat Controller for AI Integration
+ * @route   POST /api/ai/chat
+ * @access  Private (Authenticated Users)
+ */
+export const getAIChatResponse = async (req: Request, res: Response) => {
+    try {
+        const { messages } = req.body;
+
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ message: 'Invalid messages format. Must be an array.' });
+        }
+
+        if (!OPENROUTER_API_KEY) {
+            return res.status(500).json({ message: 'OpenRouter API Key not configured on the server.' });
+        }
+
+        // Define the System Prompt for Persona
+        const systemPrompt = {
+            role: 'system',
+            content: `You are the ZPPSU-CARES Well-being Assistant, a supportive, empathetic AI for Zamboanga Peninsula Polytechnic State University students and faculty. 
+            - Listen non-judgmentally.
+            - Provide initial emotional support.
+            - Guide users to university resources: Counseling Appointments, Reports, Financial Aid.
+            - If a user expresses severe distress, always suggest contacting a counselor via the "Counseling" tab immediately.
+            - Keep responses concise and formatted in markdown.`
+        };
+
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                "HTTP-Referer": `http://localhost:5173`, // Site URL for OpenRouter ranking
+                "X-Title": `ZPPSU-CARES AI Assistant`, 
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: AI_MODEL_NAME,
+                messages: [systemPrompt, ...messages],
+                 температур: 0.7,
+                stream: false
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.choices && data.choices[0]) {
+            res.status(200).json({
+                success: true,
+                content: data.choices[0].message.content
+            });
+        } else {
+            console.error('AI Error:', data);
+            res.status(500).json({ message: 'Failed to get a valid response from the AI model.' });
+        }
+
+    } catch (error: any) {
+        console.error('Internal Server Error (AI):', error);
+        res.status(500).json({ message: 'Internal Server Error while communicating with the AI model.' });
+    }
+};

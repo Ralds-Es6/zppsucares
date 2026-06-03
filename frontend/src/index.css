@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  /* ZPPSU Brand Colors (Crimson/Maroon and Gold variants) */
+  --color-primary-900: #4a0404;
+  --color-primary-800: #7b0e0e;
+  --color-primary-main: #8c1515;
+  /* Main Crimson */
+  --color-primary-600: #a31d1d;
+  --color-primary-500: #b92b2b;
+  --color-primary-400: #d03d3d;
+  --color-primary-light: #fef2f2;
+
+  --color-accent-main: #daa520;
+  /* Gold */
+  --color-accent-light: #fbeea4;
+
+  --color-bg-light: #f9fafb;
+}
+
+body {
+  @apply bg-bg-light text-gray-900 antialiased font-sans selection:bg-primary-main selection:text-white;
+}
+
+/* Custom utility for glassmorphism */
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+}
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
