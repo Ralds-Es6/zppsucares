@@ -1,23 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Mail, Lock, ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ShieldCheck, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
+import guidanceLogo from '../assets/guidance_logo.jpeg';
+import { authStorage } from '../utils/authStorage';
 
 const FacultyLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
-        const userInfo = localStorage.getItem('userInfo');
-        if (userInfo) {
-            const user = JSON.parse(userInfo);
-            if (user.role === 'faculty') {
-                navigate('/faculty-dashboard', { replace: true });
-            }
+        const user = authStorage.getFaculty();
+        if (user && user.role === 'faculty') {
+            navigate('/faculty-dashboard', { replace: true });
         }
     }, [navigate]);
 
@@ -35,15 +35,16 @@ const FacultyLogin = () => {
                 const msg = 'Access denied. This portal is for Faculty accounts only.';
                 setError(msg);
                 toast.error(msg);
-                localStorage.removeItem('userInfo');
+                authStorage.removeFaculty();
                 return;
             }
 
-            localStorage.setItem('userInfo', JSON.stringify(data));
+            authStorage.setFaculty(data);
             toast.success("Faculty Dashboard authorized.");
             navigate('/faculty-dashboard', { replace: true });
-        } catch (err: any) {
-            const msg = err.response?.data?.message || 'Unauthorized access. Please check your faculty credentials.';
+        } catch (err: unknown) {
+            const error = err as { response?: { data?: { message?: string } } };
+            const msg = error.response?.data?.message || 'Unauthorized access. Please check your faculty credentials.';
             setError(msg);
             toast.error(msg);
         } finally {
@@ -53,13 +54,14 @@ const FacultyLogin = () => {
 
     return (
         <div className="min-h-screen bg-bg-light flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 -ml-20 -mt-20 w-[400px] h-[400px] rounded-full bg-primary-light blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-0 right-0 -mr-20 -mb-20 w-[500px] h-[500px] rounded-full bg-accent-light blur-3xl opacity-40 pointer-events-none"></div>
+            <div className="absolute top-0 left-0 -ml-20 -mt-20 w-100 h-100 rounded-full bg-primary-light blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 right-0 -mr-20 -mb-20 w-125 h-125 rounded-full bg-accent-light blur-3xl opacity-40 pointer-events-none"></div>
 
-            <div className="w-full max-w-md bg-white rounded-[2rem] p-8 md:p-10 shadow-2xl border border-gray-100 relative z-10">
+            <div className="w-full max-w-md bg-white rounded-4xl p-8 md:p-10 shadow-2xl border border-gray-100 relative z-10">
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-primary-main justify-center text-white rounded-2xl flex items-center font-bold text-3xl shadow-lg mx-auto mb-6">
-                        ZC
+                    <div className="relative mb-5 flex justify-center">
+                        <div className="absolute inset-0 bg-primary-100 rounded-full blur-xl scale-110"></div>
+                        <img src={guidanceLogo} alt="ZPPSU GCTSO Seal" className="w-28 h-28 object-cover rounded-full relative z-10 shadow-xl hover:scale-105 transition-transform" style={{ borderRadius: '50%' }} />
                     </div>
                     <div className="flex justify-center mb-3">
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-light text-primary-main text-xs font-bold rounded-full border border-primary-100 uppercase tracking-widest">
@@ -100,13 +102,20 @@ const FacultyLogin = () => {
                                 <Lock size={18} />
                             </div>
                             <input
-                                type="password"
+                                type={showPassword ? 'text' : 'password'}
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="pl-11 w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-main focus:border-primary-main transition-all outline-none text-gray-900"
+                                className="pl-11 pr-12 w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-main focus:border-primary-main transition-all outline-none text-gray-900"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
                     </div>
 

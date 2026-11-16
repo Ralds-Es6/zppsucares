@@ -1,20 +1,17 @@
 import express from 'express';
 import {
-    createAssistanceRequest,
+    applyForAssistance,
     getMyAssistanceRequest,
-    updateAssistanceStep,
     getAllAssistanceRequests,
-    verifyAssistanceStep
+    reviewAssistanceRequest
 } from '../controllers/assistanceController';
 import { protect, adminOnly } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
-router.post('/request', protect, createAssistanceRequest);
+router.post('/apply', protect, applyForAssistance);
 router.get('/my-request', protect, getMyAssistanceRequest);
-router.put('/update-step', protect, updateAssistanceStep);
-
 router.get('/all', protect, adminOnly, getAllAssistanceRequests);
-router.put('/verify-step', protect, adminOnly, verifyAssistanceStep);
+router.put('/review', protect, adminOnly, reviewAssistanceRequest);
 
 export default router;

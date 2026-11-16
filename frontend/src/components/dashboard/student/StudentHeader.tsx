@@ -1,16 +1,37 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, ShieldCheck, Clock, X, HandHelping } from 'lucide-react';
+import { Bell, ShieldCheck, Clock, X } from 'lucide-react';
+import VerifiedBadge from '../../common/VerifiedBadge';
+
+export interface NotificationItem {
+    _id: string;
+    title: string;
+    message: string;
+    isRead?: boolean;
+    createdAt?: string;
+    [key: string]: unknown;
+}
+
+export interface StudentUserHeader {
+    _id?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    role?: string;
+    studentProfile?: {
+        studentId?: string;
+        verificationStatus?: string;
+    };
+}
 
 interface StudentHeaderProps {
-    user: any;
-    notifications: any[];
+    user: StudentUserHeader | null;
+    notifications: NotificationItem[];
     showNotifications: boolean;
     setShowNotifications: (show: boolean) => void;
     markNotificationAsRead: (id: string) => void;
-    viewingNotification: any;
-    setViewingNotification: (notification: any) => void;
-    setActiveTab: (tab: string) => void;
+    viewingNotification: NotificationItem | null;
+    setViewingNotification: React.Dispatch<React.SetStateAction<NotificationItem | null>> | ((notification: NotificationItem | null) => void);
 }
 
 const StudentHeader: React.FC<StudentHeaderProps> = ({
@@ -20,18 +41,23 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
     setShowNotifications,
     markNotificationAsRead,
     viewingNotification,
-    setViewingNotification,
-    setActiveTab
+    setViewingNotification
 }) => {
+    const isVerified = user?.studentProfile?.verificationStatus === 'approved' || !user?.studentProfile?.verificationStatus;
+
     return (
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-            <div>
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight">Welcome, {user?.firstName}!</h1>
-                <p className="text-gray-500 mt-1 font-medium flex items-center gap-2">
-                    <ShieldCheck size={18} className="text-green-500" /> Your student portal is secured and active.
+        <header className="flex flex-row items-center justify-between gap-4 mb-8 md:mb-12">
+            <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <span className="truncate">Welcome, {user?.firstName}!</span>
+                    {isVerified && <VerifiedBadge size="lg" />}
+                </h1>
+                <p className="text-xs sm:text-sm md:text-base text-gray-500 mt-1 font-medium flex items-center gap-2">
+                    <ShieldCheck size={16} className="text-green-500 shrink-0" />
+                    <span>Your student portal is secured and active.</span>
                 </p>
             </div>
-            <div className="flex items-center gap-3 relative">
+            <div className="flex items-center gap-3 relative shrink-0">
                 <button
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-all shadow-sm relative">
@@ -71,7 +97,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute top-16 right-0 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-50"
+                            className="absolute top-14 sm:top-16 right-0 w-[min(20rem,calc(100vw-2rem))] bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-50"
                         >
                             <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
                                 <h3 className="font-black text-gray-900">Notifications</h3>
@@ -92,7 +118,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                                             className={`p-4 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-primary-50/30' : ''}`}
                                         >
                                             <div className="flex items-start gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${!notification.isRead ? 'bg-primary-100 text-primary-main' : 'bg-gray-100 text-gray-500'}`}>
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${!notification.isRead ? 'bg-primary-100 text-primary-main' : 'bg-gray-100 text-gray-500'}`}>
                                                     <Bell size={14} />
                                                 </div>
                                                 <div>
@@ -102,7 +128,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                                                     <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notification.message}</p>
                                                     <p className="text-[10px] text-gray-400 mt-2 font-bold uppercase tracking-widest flex items-center gap-1">
                                                         <Clock size={10} />
-                                                        {new Date(notification.createdAt).toLocaleDateString()}
+                                                        {notification.createdAt ? new Date(notification.createdAt).toLocaleDateString() : 'Recent'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -123,16 +149,16 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                 {/* View Notification Full Detail Modal */}
                 <AnimatePresence>
                     {viewingNotification && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
+                        <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                                 animate={{ scale: 1, opacity: 1, y: 0 }}
                                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                                className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl relative"
+                                className="bg-white w-full max-w-xl rounded-3xl sm:rounded-[3rem] p-5 sm:p-10 shadow-2xl relative"
                             >
                                 <button
                                     onClick={() => setViewingNotification(null)}
-                                    className="absolute top-8 right-8 text-gray-400 hover:text-red-500 transition-colors"
+                                    className="absolute top-5 right-5 sm:top-8 sm:right-8 text-gray-400 hover:text-red-500 transition-colors"
                                 >
                                     <X size={24} />
                                 </button>
@@ -144,7 +170,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                                     <div>
                                         <h2 className="text-2xl font-black text-gray-900 leading-tight">{viewingNotification.title}</h2>
                                         <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
-                                            <Clock size={12} /> {new Date(viewingNotification.createdAt).toLocaleString()}
+                                            <Clock size={12} /> {viewingNotification.createdAt ? new Date(viewingNotification.createdAt).toLocaleString() : 'Recent'}
                                         </p>
                                     </div>
                                 </div>
@@ -163,13 +189,6 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                         </div>
                     )}
                 </AnimatePresence>
-
-                <button
-                    onClick={() => setActiveTab('grants')}
-                    className="bg-primary-main text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary-main/20 hover:shadow-xl hover:bg-primary-800 transition-all flex items-center gap-2"
-                >
-                    <HandHelping size={18} /> Seek New Support
-                </button>
             </div>
         </header>
     );

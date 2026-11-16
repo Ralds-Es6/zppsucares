@@ -1,21 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, HandHelping } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, HandHelping, User, FileText, Calendar, AlertCircle } from 'lucide-react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
+import { authStorage } from '../../../utils/authStorage';
+
+export interface AssistanceApplication {
+    _id: string;
+    student?: {
+        _id?: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        studentProfile?: {
+            studentId?: string;
+            course?: string;
+            yearLevel?: number | string;
+            section?: string;
+        };
+    };
+    type?: string;
+    householdIncome?: string;
+    parentOccupation?: string;
+    numberOfDependents?: number | string;
+    gpa?: string;
+    documentType?: string;
+    documentReference?: string;
+    additionalDocs?: string;
+    availableDate?: string;
+    contactNumber?: string;
+    additionalNotes?: string;
+    status: string;
+    adminNote?: string;
+    createdAt?: string;
+}
 
 const AssistancePipeline: React.FC = () => {
-    const [assistanceRequests, setAssistanceRequests] = useState<any[]>([]);
-    const [selectedAssistance, setSelectedAssistance] = useState<any>(null);
+    const [assistanceRequests, setAssistanceRequests] = useState<AssistanceApplication[]>([]);
+    const [selectedAssistance, setSelectedAssistance] = useState<AssistanceApplication | null>(null);
     const [assistanceAdminNote, setAssistanceAdminNote] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
-    const stepLabels = ['Profiling', 'Documentation', 'Verification', 'Final Review'];
-    const stepKeys = ['step1', 'step2', 'step3', 'step4'] as const;
-
     const fetchAssistanceRequests = async () => {
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getAdmin() || {};
             const { data } = await axios.get('/api/assistance/all', {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
@@ -31,196 +59,253 @@ const AssistancePipeline: React.FC = () => {
         fetchAssistanceRequests();
     }, []);
 
-    const handleVerifyStep = async (requestId: string, step: number, status: string) => {
+    const handleReviewApplication = async (requestId: string, status: string) => {
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-            await axios.put('/api/assistance/verify-step', {
-                requestId, step, status, adminNote: assistanceAdminNote
+            const userInfo = authStorage.getAdmin() || {};
+            await axios.put('/api/assistance/review', {
+                requestId, status, adminNote: assistanceAdminNote
             }, {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
-            toast.success(`Step ${step} marked as ${status}.`);
+            toast.success(`Application has been successfully marked as ${status}!`);
             setAssistanceAdminNote('');
+            setSelectedAssistance(null);
             fetchAssistanceRequests();
-
-            // Re-fetch to update details
-            const { data } = await axios.get('/api/assistance/all', {
-                headers: { Authorization: `Bearer ${userInfo.token}` }
-            });
-            const updated = data.find((r: any) => r._id === requestId);
-            if (updated) setSelectedAssistance(updated);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to update step.');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            toast.error(err.response?.data?.message || 'Failed to evaluate application.');
         }
     };
 
-    const getStepStatusColor = (status: string) => {
+    const getStatusStyle = (status: string) => {
         switch (status) {
-            case 'Verified': return 'bg-green-100 text-green-700 border-green-200';
-            case 'Pending Review': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-            case 'In Progress': return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'Approved': return 'bg-green-100 text-green-700 border-green-200';
+            case 'Pending Review': return 'bg-yellow-100 text-yellow-700 border-yellow-200 animate-pulse';
             case 'Rejected': return 'bg-red-100 text-red-700 border-red-200';
-            default: return 'bg-gray-100 text-gray-400 border-gray-200';
+            default: return 'bg-gray-100 text-gray-500 border-gray-200';
         }
+    };
+
+    // Helper to calculate basic prioritization priority based on income string
+    const getPriorityBracket = (incomeStr?: string) => {
+        if (!incomeStr) return { label: 'Standard Bracket', color: 'bg-gray-100 text-gray-700' };
+        const cleanVal = parseInt(incomeStr.replace(/[^0-9]/g, ''), 10);
+        if (isNaN(cleanVal)) return { label: 'Needs Evaluation', color: 'bg-yellow-100 text-yellow-700' };
+        
+        if (cleanVal <= 15000) return { label: 'High Financial Need', color: 'bg-purple-100 text-purple-700' };
+        if (cleanVal <= 30000) return { label: 'Moderate Financial Need', color: 'bg-blue-100 text-blue-700' };
+        return { label: 'Standard Income Bracket', color: 'bg-gray-100 text-gray-700' };
     };
 
     if (selectedAssistance) {
+        const bracket = getPriorityBracket(selectedAssistance.householdIncome);
         return (
             <motion.div key="assist-review" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-8 pb-20">
-                <div className="flex items-center gap-6">
-                    <button onClick={() => setSelectedAssistance(null)} className="w-14 h-14 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-primary-main hover:border-primary-main/20 hover:bg-primary-50 transition-all shadow-sm">
-                        <ArrowLeft size={24} />
+                <div className="flex items-center gap-4 sm:gap-6">
+                    <button onClick={() => setSelectedAssistance(null)} className="w-11 h-11 sm:w-14 sm:h-14 shrink-0 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-primary-main hover:border-primary-main/20 hover:bg-primary-50 transition-all shadow-sm">
+                        <ArrowLeft size={22} />
                     </button>
-                    <div>
-                        <h2 className="text-3xl font-black text-gray-900 tracking-tight uppercase">MILESTONE REVIEW</h2>
+                    <div className="min-w-0">
+                        <h2 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight uppercase">APPLICATION EVALUATION</h2>
                         <p className="text-gray-500 font-medium italic mt-1">
                             Applicant: <span className="text-primary-main font-black not-italic">{selectedAssistance.student?.firstName} {selectedAssistance.student?.lastName}</span>
                         </p>
                     </div>
                 </div>
 
-                {/* Shopee-Style Step Tracker */}
-                <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40">
-                    <div className="flex items-center justify-between relative">
-                        {stepLabels.map((label, i) => {
-                            const status = selectedAssistance[stepKeys[i]]?.status || 'Locked';
-                            const isLast = i === stepLabels.length - 1;
-                            return (
-                                <div key={i} className="flex-1 flex flex-col items-center relative">
-                                    {!isLast && (
-                                        <div className={`absolute left-1/2 top-6 w-full h-[2px] -z-0 ${status === 'Verified' ? 'bg-green-200' : 'bg-gray-100'}`}></div>
-                                    )}
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 z-10 shadow-sm transition-all duration-500 ${status === 'Verified' ? 'bg-green-500 text-white border-green-400' :
-                                        status === 'Pending Review' ? 'bg-yellow-500 text-white border-yellow-400 animate-pulse' :
-                                            status === 'In Progress' ? 'bg-primary-main text-white border-primary-400 ring-4 ring-primary-100' :
-                                                status === 'Rejected' ? 'bg-red-500 text-white border-red-400' : 'bg-gray-50 text-gray-300 border-gray-100'
-                                        }`}>
-                                        {status === 'Verified' ? <CheckCircle2 size={24} /> : (i + 1)}
-                                    </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest mt-3 text-gray-500">{label}</p>
-                                    <p className={`text-[8px] font-black uppercase tracking-widest mt-1 ${status === 'Pending Review' ? 'text-yellow-600' : status === 'Verified' ? 'text-green-600' : 'text-gray-400'}`}>{status}</p>
+                {/* Main Evaluation Grid */}
+                <div className="grid md:grid-cols-3 gap-8">
+                    
+                    {/* Panel 1: Socio-Economic Profile */}
+                    <div className="p-8 glass-slab rounded-[2.5rem] flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-main border border-primary-100 shadow-sm">
+                                    <User size={22} />
                                 </div>
-                            );
-                        })}
+                                <div>
+                                    <h4 className="font-extrabold text-gray-900 uppercase">Socio-Economic</h4>
+                                    <p className="text-xs text-gray-400">Financial profile verification</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-gray-50">
+                                <div>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Household Income</span>
+                                    <span className="font-black text-gray-900 text-base">{selectedAssistance.householdIncome}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Parent Occupation</span>
+                                    <span className="font-black text-gray-900 text-base">{selectedAssistance.parentOccupation}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Dependents</span>
+                                    <span className="font-black text-gray-900 text-base">{selectedAssistance.numberOfDependents} members</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Grade GPA</span>
+                                    <span className="font-black text-primary-main text-base">{selectedAssistance.gpa}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Calculated Priority Badge */}
+                        <div className={`mt-8 p-4 rounded-2xl text-xs font-black uppercase text-center tracking-widest border ${bracket.color}`}>
+                            {bracket.label}
+                        </div>
                     </div>
-                </div>
 
-                {/* Step-by-Step Panels */}
-                <div className="grid md:grid-cols-2 gap-8">
-                    {stepLabels.map((label, i) => {
-                        const stepData = selectedAssistance[stepKeys[i]];
-                        const status = stepData?.status || 'Locked';
-                        const isPendingReview = status === 'Pending Review';
-                        // Step 4 is actioned purely by admin — treat 'In Progress' same as 'Pending Review'
-                        const isActionable = isPendingReview || (i === 3 && status === 'In Progress');
+                    {/* Panel 2: Documentation Detail */}
+                    <div className="p-8 glass-slab rounded-[2.5rem]">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-main border border-primary-100 shadow-sm">
+                                <FileText size={22} />
+                            </div>
+                            <div>
+                                <h4 className="font-extrabold text-gray-900 uppercase">Documents</h4>
+                                <p className="text-xs text-gray-400">Supporting attachments & reference</p>
+                            </div>
+                        </div>
 
-                        return (
-                            <div key={i} className={`p-10 rounded-[3rem] border-2 relative overflow-hidden transition-all duration-300 ${isActionable ? 'bg-yellow-50/50 border-yellow-200 shadow-2xl shadow-yellow-200/20' :
-                                status === 'Verified' ? 'bg-green-50/20 border-green-100' :
-                                    status === 'Rejected' ? 'bg-red-50/20 border-red-100' : 'bg-white border-gray-50 opacity-60'
-                                }`}>
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${getStepStatusColor(status)} shadow-sm`}>{i + 1}</div>
-                                    <div>
-                                        <h4 className="font-black text-gray-900 uppercase tracking-tight">{label}</h4>
-                                        <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${status === 'Pending Review' ? 'text-yellow-600' : 'text-gray-400'}`}>{status}</p>
-                                    </div>
+                        <div className="space-y-4 pt-4 border-t border-gray-50">
+                            <div>
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Primary Certificate</span>
+                                <span className="font-black text-gray-900 text-base">{selectedAssistance.documentType}</span>
+                            </div>
+                            <div>
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Reference / Control No.</span>
+                                <span className="font-mono font-black text-gray-900 text-base">{selectedAssistance.documentReference}</span>
+                            </div>
+                            {selectedAssistance.additionalDocs && (
+                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 mt-4">
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Additional Documentation Note</span>
+                                    <span className="text-xs text-gray-600 font-medium italic">"{selectedAssistance.additionalDocs}"</span>
                                 </div>
+                            )}
+                        </div>
+                    </div>
 
-                                {/* Dynamic Content based on Step */}
-                                {i === 0 && stepData?.data && (
-                                    <div className="space-y-4 mb-8 p-6 bg-white rounded-[1.5rem] border border-gray-100 shadow-sm">
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Household Income</span><span className="font-black text-gray-900">{stepData.data.householdIncome || 'N/A'}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Parent Occupation</span><span className="font-black text-gray-900">{stepData.data.parentOccupation || 'N/A'}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Current GPA</span><span className="font-black text-primary-main">{stepData.data.gpa || 'N/A'}</span></div>
-                                    </div>
-                                )}
+                    {/* Panel 3: Verification Prefs & Log */}
+                    <div className="p-8 bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/20 flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-main border border-primary-100 shadow-sm">
+                                    <Calendar size={22} />
+                                </div>
+                                <div>
+                                    <h4 className="font-extrabold text-gray-900 uppercase">Verification Prefs</h4>
+                                    <p className="text-xs text-gray-400">Interviews and scheduling</p>
+                                </div>
+                            </div>
 
-                                {i === 1 && stepData?.data && (
-                                    <div className="space-y-4 mb-8 p-6 bg-white rounded-[1.5rem] border border-gray-100 shadow-sm">
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Document Type</span><span className="font-black text-gray-900">{stepData.data.documentType || 'N/A'}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Reference No.</span><span className="font-black text-gray-900 font-mono">{stepData.data.documentReference || 'N/A'}</span></div>
-                                    </div>
-                                )}
-
-                                {i === 2 && stepData?.data && (
-                                    <div className="space-y-4 mb-8 p-6 bg-white rounded-[1.5rem] border border-gray-100 shadow-sm">
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Proposed Interview</span><span className="font-black text-gray-900">{stepData.data.availableDate || 'N/A'}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Contact Priority</span><span className="font-black text-gray-900">{stepData.data.contactNumber || 'N/A'}</span></div>
-                                    </div>
-                                )}
-
-                                {i === 3 && isActionable && (
-                                    <div className="space-y-4 mb-8">
-                                        <div className="p-6 bg-primary-main text-white rounded-[2rem] shadow-xl shadow-primary-main/20">
-                                            <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-2">Final Review Protocol</p>
-                                            <p className="text-sm font-bold leading-relaxed">Confirm that all documentation has been verified and the applicant meets the eligibility criteria for the assistance program.</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {stepData?.adminNote && (
-                                    <div className="text-[11px] text-gray-500 font-medium italic mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                        <span className="font-black text-gray-700 not-italic uppercase tracking-widest block mb-1">Administrative Log:</span> {stepData.adminNote}
-                                    </div>
-                                )}
-
-                                {isActionable && (
-                                    <div className="space-y-4 mt-8 pt-8 border-t border-yellow-200">
-                                        <textarea
-                                            placeholder="Internal remarks for this milestone..."
-                                            value={assistanceAdminNote}
-                                            onChange={(e) => setAssistanceAdminNote(e.target.value)}
-                                            rows={3}
-                                            className="w-full p-6 bg-white border-2 border-transparent rounded-[1.5rem] text-sm outline-none focus:border-primary-main transition-all resize-none font-bold text-gray-800 shadow-sm"
-                                        />
-                                        <div className="flex gap-3">
-                                            <button
-                                                onClick={() => handleVerifyStep(selectedAssistance._id, i + 1, 'Verified')}
-                                                className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-green-600 hover:shadow-xl hover:shadow-green-500/20 transition-all active:scale-95"
-                                            >
-                                                Approve Milestone
-                                            </button>
-                                            <button
-                                                onClick={() => handleVerifyStep(selectedAssistance._id, i + 1, 'Rejected')}
-                                                className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600 hover:shadow-xl hover:shadow-red-500/20 transition-all active:scale-95"
-                                            >
-                                                Reject Milestone
-                                            </button>
-                                        </div>
+                            <div className="space-y-4 pt-4 border-t border-gray-50">
+                                <div>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Available Interview Date</span>
+                                    <span className="font-black text-gray-900 text-base">
+                                        {selectedAssistance.availableDate ? new Date(selectedAssistance.availableDate).toLocaleDateString(undefined, { dateStyle: 'long' }) : 'N/A'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Direct Contact Priority</span>
+                                    <span className="font-mono font-black text-gray-900 text-base">{selectedAssistance.contactNumber}</span>
+                                </div>
+                                {selectedAssistance.additionalNotes && (
+                                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 mt-4">
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Applicant Remarks</span>
+                                        <span className="text-xs text-gray-600 font-medium italic">"{selectedAssistance.additionalNotes}"</span>
                                     </div>
                                 )}
                             </div>
-                        );
-                    })}
+                        </div>
+
+                        <div className={`p-4 rounded-2xl text-xs font-black uppercase text-center tracking-widest border ${getStatusStyle(selectedAssistance.status)}`}>
+                            Global Status: {selectedAssistance.status}
+                        </div>
+                    </div>
                 </div>
+
+                {/* Previous Logs Display */}
+                {selectedAssistance.adminNote && (
+                    <div className="p-6 bg-yellow-50 rounded-4xl border border-yellow-100 flex items-start gap-4">
+                        <AlertCircle size={20} className="text-yellow-600 mt-1 shrink-0" />
+                        <div>
+                            <p className="text-xs font-black text-yellow-800 uppercase tracking-widest">Active Evaluation Note Logged</p>
+                            <p className="text-sm text-yellow-700 font-medium mt-2 italic">"{selectedAssistance.adminNote}"</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Evaluation Action Panel (Actionable when Pending Review) */}
+                {selectedAssistance.status === 'Pending Review' ? (
+                    <div className="p-10 glass-slab rounded-[3rem] space-y-6">
+                        <div>
+                            <h4 className="font-black text-gray-900 uppercase tracking-tight text-xl">Review Decision & Feedback</h4>
+                            <p className="text-xs text-gray-400 mt-1">Please provide evaluation remarks. Your decision triggers notifications and updates the student's status.</p>
+                        </div>
+
+                        <textarea
+                            placeholder="Write administrative review remarks (required for rejection, optional for approval)..."
+                            value={assistanceAdminNote}
+                            onChange={(e) => setAssistanceAdminNote(e.target.value)}
+                            rows={4}
+                            className="w-full p-6 bg-gray-50 border-2 border-transparent focus:border-primary-main rounded-4xl text-sm outline-none transition-all resize-none font-bold text-gray-800"
+                        />
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => handleReviewApplication(selectedAssistance._id, 'Approved')}
+                                className="flex-1 py-5 bg-green-500 text-white rounded-4xl font-black text-xs uppercase tracking-widest hover:bg-green-600 hover:shadow-2xl hover:shadow-green-500/20 transition-all flex items-center justify-center gap-2"
+                            >
+                                <CheckCircle size={18} /> Approve Full Application
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (!assistanceAdminNote.trim()) {
+                                        toast.warning("Please provide evaluation remarks to justify rejection.");
+                                        return;
+                                    }
+                                    handleReviewApplication(selectedAssistance._id, 'Rejected');
+                                }}
+                                className="flex-1 py-5 bg-red-500 text-white rounded-4xl font-black text-xs uppercase tracking-widest hover:bg-red-600 hover:shadow-2xl hover:shadow-red-500/20 transition-all flex items-center justify-center gap-2"
+                            >
+                                <XCircle size={18} /> Reject Application
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100/50 text-center">
+                        <p className="text-gray-400 font-extrabold text-sm uppercase tracking-wider">Evaluation Completed. This application is locked.</p>
+                    </div>
+                )}
             </motion.div>
         );
     }
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight uppercase">Assistance Tracker</h1>
-                    <p className="text-gray-500 font-medium text-lg mt-1 italic">Managing scholarship and financial aid applications.</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight uppercase">Assistance Tracker</h1>
+                    <p className="text-gray-500 font-medium text-sm sm:text-base lg:text-lg mt-1 italic">Managing scholarship and financial aid applications.</p>
                 </div>
             </div>
 
-            <div className="bg-white rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
-                <table className="w-full text-left border-collapse">
+            <div className="glass-slab rounded-3xl sm:rounded-[3rem] overflow-hidden">
+                <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[640px]">
                     <thead>
                         <tr className="bg-gray-50/50 text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] border-b border-gray-100">
                             <th className="px-8 py-6">Applicant</th>
+                            <th className="px-8 py-6">Program</th>
+                            <th className="px-8 py-6">Submitted Date</th>
                             <th className="px-8 py-6">Status</th>
-                            <th className="px-8 py-6 text-center">Application Progress</th>
                             <th className="px-8 py-6 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {isLoading ? (
                             <tr>
-                                <td colSpan={4} className="py-20 text-center">
+                                <td colSpan={5} className="py-20 text-center">
                                     <div className="w-12 h-12 border-4 border-primary-main border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Loading Applications...</p>
                                 </td>
@@ -239,50 +324,16 @@ const AssistancePipeline: React.FC = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6">
-                                        {(() => {
-                                            const getStatus = () => {
-                                                const steps = [r.step1, r.step2, r.step3, r.step4];
-                                                const allVerified = steps.every((s: any) => s?.status === 'Verified');
-                                                if (r.status === 'Finalized' || allVerified) return { label: 'Approved', style: 'bg-green-50 text-green-700 border-green-200' };
-                                                if (steps.some((s: any) => s?.status === 'Rejected')) return { label: 'Rejected', style: 'bg-red-50 text-red-700 border-red-200' };
-                                                if (steps.some((s: any) => s?.status === 'Pending Review')) return { label: 'Under Review', style: 'bg-yellow-50 text-yellow-700 border-yellow-200' };
-                                                if (steps.some((s: any) => s?.status === 'In Progress')) return { label: 'In Progress', style: 'bg-blue-50 text-blue-700 border-blue-200' };
-                                                return { label: 'Pending', style: 'bg-gray-50 text-gray-500 border-gray-200' };
-                                            };
-                                            const { label, style } = getStatus();
-                                            return (
-                                                <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${style}`}>
-                                                    {label}
-                                                </span>
-                                            );
-                                        })()}
+                                    <td className="px-8 py-6 font-bold text-gray-700 text-sm">
+                                        {r.type}
+                                    </td>
+                                    <td className="px-8 py-6 text-gray-400 font-medium text-xs">
+                                        {r.createdAt ? new Date(r.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'N/A'}
                                     </td>
                                     <td className="px-8 py-6">
-                                        <div className="flex flex-col items-center">
-                                            <div className="flex items-center gap-0">
-                                                {['step1', 'step2', 'step3', 'step4'].map((stepKey, i) => {
-                                                    const status = r[stepKey]?.status || 'Locked';
-                                                    const isLast = i === 3;
-                                                    return (
-                                                        <div key={i} className="flex items-center">
-                                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-black border-2 transition-all duration-500 ${status === 'Verified' ? 'bg-green-500 text-white border-green-400' :
-                                                                status === 'Pending Review' ? 'bg-yellow-500 text-white border-yellow-400 animate-pulse' :
-                                                                    status === 'In Progress' ? 'bg-primary-main text-white border-primary-400 ring-2 ring-primary-100' :
-                                                                        status === 'Rejected' ? 'bg-red-500 text-white border-red-400' :
-                                                                            'bg-gray-100 text-gray-300 border-gray-200'
-                                                                }`}>
-                                                                {status === 'Verified' ? '✓' : (i + 1)}
-                                                            </div>
-                                                            {!isLast && (
-                                                                <div className={`w-4 h-[2px] transition-colors duration-500 ${status === 'Verified' ? 'bg-green-300' : 'bg-gray-100'}`}></div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.15em] mt-2">Step {r.currentStep} of 4</p>
-                                        </div>
+                                        <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${getStatusStyle(r.status)}`}>
+                                            {r.status}
+                                        </span>
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <button
@@ -296,7 +347,7 @@ const AssistancePipeline: React.FC = () => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={4} className="py-20 text-center">
+                                <td colSpan={5} className="py-20 text-center">
                                     <HandHelping size={48} className="text-gray-200 mx-auto mb-4" />
                                     <h3 className="text-xl font-black text-gray-400 uppercase tracking-widest">No Active Applications</h3>
                                     <p className="text-gray-400 mt-2 font-medium">Scholarship and financial aid applications will appear here.</p>
@@ -305,6 +356,7 @@ const AssistancePipeline: React.FC = () => {
                         )}
                     </tbody>
                 </table>
+                </div>
             </div>
         </motion.div>
     );

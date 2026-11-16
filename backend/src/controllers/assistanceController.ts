@@ -1,27 +1,51 @@
 import { Request, Response } from 'express';
-import { AssistanceRequest, StepStatus } from '../models/AssistanceRequest';
+import { AssistanceRequest, AssistanceStatus, AssistanceRequestType } from '../models/AssistanceRequest';
 import { Notification } from '../models/NotificationModel';
 
-// @desc    Create new assistance request
-// @route   POST /api/assistance/request
+// @desc    Apply for assistance (Student)
+// @route   POST /api/assistance/apply
 // @access  Student
-export const createAssistanceRequest = async (req: Request, res: Response) => {
+export const applyForAssistance = async (req: Request, res: Response) => {
     try {
-        const { type } = req.body;
+        const {
+            type,
+            householdIncome,
+            parentOccupation,
+            numberOfDependents,
+            gpa,
+            documentType,
+            documentReference,
+            additionalDocs,
+            availableDate,
+            contactNumber,
+            additionalNotes
+        } = req.body;
 
-        const existingRequest = await AssistanceRequest.findOne({
+        // Check if there is already a pending request for this student
+        const pendingRequest = await AssistanceRequest.findOne({
             student: req.user?._id,
-            status: 'Active'
+            status: AssistanceStatus.PENDING
         });
 
-        if (existingRequest) {
-            return res.status(400).json({ message: 'You already have an active assistance request in progress.' });
+        if (pendingRequest) {
+            return res.status(400).json({ message: 'You already have an active application pending review.' });
         }
 
         const request = await AssistanceRequest.create({
             student: req.user?._id,
             type,
-            history: [{ action: 'Application Initialized', note: `Started ${type} journey.` }]
+            status: AssistanceStatus.PENDING,
+            householdIncome,
+            parentOccupation,
+            numberOfDependents,
+            gpa,
+            documentType,
+            documentReference,
+            additionalDocs,
+            availableDate,
+            contactNumber,
+            additionalNotes,
+            history: [{ action: 'Application Submitted', note: `Submitted application for ${type}.` }]
         });
 
         res.status(201).json(request);
@@ -30,52 +54,15 @@ export const createAssistanceRequest = async (req: Request, res: Response) => {
     }
 };
 
-// @desc    Get student's active request
+// @desc    Get student's latest request
 // @route   GET /api/assistance/my-request
 // @access  Student
 export const getMyAssistanceRequest = async (req: Request, res: Response) => {
     try {
         const request = await AssistanceRequest.findOne({
-            student: req.user?._id,
-            status: { $in: ['Active', 'Finalized'] }
+            student: req.user?._id
         }).sort({ updatedAt: -1 });
 
-        res.json(request);
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-// @desc    Update step data (Student)
-// @route   PUT /api/assistance/update-step
-// @access  Student
-export const updateAssistanceStep = async (req: Request, res: Response) => {
-    try {
-        const { step, data } = req.body;
-        const request = await AssistanceRequest.findOne({
-            student: req.user?._id,
-            status: 'Active'
-        });
-
-        if (!request) {
-            return res.status(404).json({ message: 'No active request found.' });
-        }
-
-        if (step === 1) {
-            request.step1.data = data;
-            request.step1.status = StepStatus.PENDING_REVIEW;
-            request.history.push({ action: 'Step 1 Submitted', note: 'Socio-Economic profiling completed.' });
-        } else if (step === 2) {
-            request.step2.data = data;
-            request.step2.status = StepStatus.PENDING_REVIEW;
-            request.history.push({ action: 'Step 2 Submitted', note: 'Documents uploaded for review.' });
-        } else if (step === 3) {
-            request.step3.data = data;
-            request.step3.status = StepStatus.PENDING_REVIEW;
-            request.history.push({ action: 'Step 3 Submitted', note: 'Verification details submitted.' });
-        }
-
-        await request.save();
         res.json(request);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -100,62 +87,40 @@ export const getAllAssistanceRequests = async (req: Request, res: Response) => {
     }
 };
 
-// @desc    Verify/Reject step (Admin)
-// @route   PUT /api/assistance/verify-step
+// @desc    Review/Approve/Reject application (Admin)
+// @route   PUT /api/assistance/review
 // @access  Admin
-export const verifyAssistanceStep = async (req: Request, res: Response) => {
+export const reviewAssistanceRequest = async (req: Request, res: Response) => {
     try {
-        const { requestId, step, status, adminNote } = req.body;
-        const request = await AssistanceRequest.findById(requestId);
+        const { requestId, status, adminNote } = req.body;
 
-        if (!request) return res.status(404).json({ message: 'Request not found' });
-
-        if (step === 1) {
-            request.step1.status = status;
-            request.step1.adminNote = adminNote;
-            if (status === StepStatus.VERIFIED) {
-                request.step2.status = StepStatus.IN_PROGRESS;
-                request.history.push({ action: 'Step 1 Verified', note: adminNote || 'Profiling verified.' });
-            } else if (status === StepStatus.REJECTED) {
-                request.history.push({ action: 'Step 1 Rejected', note: adminNote });
-            }
-        } else if (step === 2) {
-            request.step2.status = status;
-            request.step2.adminNote = adminNote;
-            if (status === StepStatus.VERIFIED) {
-                request.step3.status = StepStatus.IN_PROGRESS;
-                request.history.push({ action: 'Step 2 Verified', note: adminNote || 'Documents verified.' });
-            } else if (status === StepStatus.REJECTED) {
-                request.history.push({ action: 'Step 2 Rejected', note: adminNote });
-            }
-        } else if (step === 3) {
-            request.step3.status = status;
-            request.step3.adminNote = adminNote;
-            if (status === StepStatus.VERIFIED) {
-                request.step4.status = StepStatus.PENDING_REVIEW;
-                request.history.push({ action: 'Step 3 Verified', note: adminNote || 'Interview/Verification completed.' });
-                request.history.push({ action: 'Final Review Unlocked', note: 'All steps completed. Application ready for final approval.' });
-            } else if (status === StepStatus.REJECTED) {
-                request.history.push({ action: 'Step 3 Rejected', note: adminNote });
-            }
-        } else if (step === 4) {
-            request.step4.status = status;
-            request.step4.adminNote = adminNote;
-            if (status === StepStatus.VERIFIED) {
-                request.status = 'Finalized';
-                request.history.push({ action: 'Application Approved', note: adminNote || 'Full assistance package approved.' });
-            } else if (status === StepStatus.REJECTED) {
-                request.history.push({ action: 'Application Rejected', note: adminNote || 'Application did not meet final approval criteria.' });
-            }
+        if (!Object.values(AssistanceStatus).includes(status)) {
+            return res.status(400).json({ message: 'Invalid evaluation status.' });
         }
+
+        const request = await AssistanceRequest.findById(requestId);
+        if (!request) {
+            return res.status(404).json({ message: 'Application request not found.' });
+        }
+
+        request.status = status;
+        request.adminNote = adminNote;
+
+        const actionText = status === AssistanceStatus.APPROVED ? 'Application Approved' : 'Application Rejected';
+        const noteText = adminNote || (status === AssistanceStatus.APPROVED ? 'Approved by administration.' : 'Rejected by administration.');
+
+        request.history.push({
+            action: actionText,
+            note: noteText
+        });
 
         await request.save();
 
         // Notify student
         await Notification.create({
             user: request.student,
-            title: `Assistance Journey Update`,
-            message: `Step ${step} has been marked as ${status}. ${adminNote ? 'Message: ' + adminNote : ''}`,
+            title: `Assistance Application Decision`,
+            message: `Your application for ${request.type} has been ${status.toLowerCase()}. ${adminNote ? 'Remarks: ' + adminNote : ''}`,
             type: 'Update',
             relatedId: request._id
         });

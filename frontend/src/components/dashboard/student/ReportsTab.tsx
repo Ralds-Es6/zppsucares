@@ -5,16 +5,18 @@ import {
     Briefcase, History, Search
 } from 'lucide-react';
 
+import type { ReportItem, CaseItem } from '../../../pages/StudentDashboard';
+
 interface ReportsTabProps {
     setShowReportModal: (show: boolean) => void;
     isReportsLoading: boolean;
-    reports: any[];
+    reports: ReportItem[];
     reportPage: number;
     reportsPerPage: number;
     setReportPage: (page: number | ((prev: number) => number)) => void;
-    setSelectedViewReport: (report: any) => void;
+    setSelectedViewReport: (report: ReportItem | null) => void;
     isCasesLoading: boolean;
-    cases: any[];
+    cases: CaseItem[];
 }
 
 const ReportsTab: React.FC<ReportsTabProps> = ({
@@ -36,15 +38,15 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
             exit={{ opacity: 0, y: -20 }}
             className="space-y-8"
         >
-            <section className="glass p-8 rounded-[2.5rem] border border-white/20">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+            <section className="glass p-5 sm:p-8 rounded-3xl sm:rounded-[2.5rem] border border-white/20">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-10">
                     <div>
-                        <h2 className="text-3xl font-black text-gray-900">Support Reports</h2>
-                        <p className="text-gray-500 font-medium">Confidential reporting system for student concerns.</p>
+                        <h2 className="text-2xl sm:text-3xl font-black text-gray-900">Support Reports</h2>
+                        <p className="text-sm sm:text-base text-gray-500 font-medium">Confidential reporting system for student concerns.</p>
                     </div>
                     <button
                         onClick={() => setShowReportModal(true)}
-                        className="bg-primary-main text-white px-8 py-4 rounded-2xl font-bold shadow-xl shadow-primary-main/30 hover:bg-primary-800 transition-all flex items-center gap-2"
+                        className="w-full md:w-auto justify-center bg-primary-main text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl font-bold shadow-xl shadow-primary-main/30 hover:bg-primary-800 transition-all flex items-center gap-2"
                     >
                         <AlertCircle size={20} /> File New Case
                     </button>
@@ -57,11 +59,11 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                         <>
                             {reports
                                 .slice((reportPage - 1) * reportsPerPage, reportPage * reportsPerPage)
-                                .map((report: any) => (
+                                .map((report: ReportItem) => (
                                     <div
                                         key={report._id}
                                         onClick={() => setSelectedViewReport(report)}
-                                        className="p-8 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col gap-6 hover:shadow-xl hover:border-primary-main/30 hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden"
+                                        className="p-8 glass-slab-interactive rounded-4xl flex flex-col gap-6 cursor-pointer group relative overflow-hidden"
                                     >
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-primary-50 rounded-bl-[4rem] opacity-0 group-hover:opacity-50 transition-opacity"></div>
                                         <div className="flex items-start justify-between relative z-10">
@@ -72,7 +74,9 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                                                         {report.priority}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Case ID: {report._id.substring(0, 12)} • {new Date(report.createdAt).toLocaleDateString()}</p>
+                                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                                                    Case ID: {report._id ? report._id.substring(0, 12) : 'N/A'} • {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : 'Recent'}
+                                                </p>
                                             </div>
                                             <span className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${report.status === 'Resolved' ? 'bg-green-100 text-green-700' : report.status === 'Reviewed' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
                                                 {report.status}
@@ -87,7 +91,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                                             </div>
                                         </div>
 
-                                        {report.adminNote && (
+                                        {Boolean(report.adminNote) && (
                                             <div className="p-4 bg-primary-main/5 rounded-2xl border border-primary-100 relative z-10">
                                                 <p className="text-[10px] font-black text-primary-main uppercase tracking-widest mb-1 flex items-center gap-1.5">
                                                     <MessageSquare size={12} /> Counselor Update Received
@@ -152,7 +156,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                         {isCasesLoading ? (
                             <div className="p-10 text-center text-gray-400 font-bold">Checking University Records...</div>
                         ) : cases.length > 0 ? (
-                            cases.map((c: any) => (
+                            cases.map((c: CaseItem) => (
                                 <div key={c._id} className="glass p-8 rounded-[2.5rem] border border-white/20 shadow-xl hover:border-primary-main transition-all group overflow-hidden relative">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-bl-full -mr-10 -mt-10 opacity-40 group-hover:scale-110 transition-transform"></div>
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -162,7 +166,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{c.category}</span>
                                             </div>
                                             <h4 className="text-2xl font-black text-gray-900 group-hover:text-primary-main transition-colors uppercase tracking-tight">{c.title}</h4>
-                                            <p className="text-sm text-gray-500 font-medium mt-1">Status as of {new Date(c.updatedAt).toLocaleDateString()}</p>
+                                            <p className="text-sm text-gray-500 font-medium mt-1">Status as of {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : 'Recent'}</p>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-right hidden md:block">

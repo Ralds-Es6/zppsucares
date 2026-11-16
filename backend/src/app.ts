@@ -22,6 +22,11 @@ app.use((req, res, next) => {
     next();
 });
 
+import path from 'path';
+
+// Static file serving for uploaded verification documents
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Routes
 app.use('/api', routes);
 

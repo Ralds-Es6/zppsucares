@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
+import { AlertCircle, AlertTriangle, BellRing, Info, X } from 'lucide-react';
 import 'react-calendar/dist/Calendar.css';
+import { authStorage } from '../utils/authStorage';
 
 // Shared Components
 import DashboardLayout from '../components/dashboard/shared/DashboardLayout';
 
 // Student Components
 import StudentSidebar from '../components/dashboard/student/StudentSidebar';
-import StudentHeader from '../components/dashboard/student/StudentHeader';
+import StudentHeader, { type NotificationItem } from '../components/dashboard/student/StudentHeader';
 
 // Student Tab Components
 import OverviewTab from '../components/dashboard/student/OverviewTab';
@@ -25,23 +27,123 @@ import SupportReportModal from '../components/dashboard/student/modals/SupportRe
 import ViewReportModal from '../components/dashboard/student/modals/ViewReportModal';
 import CounselingModal from '../components/dashboard/student/modals/CounselingModal';
 import AssistanceJourneyModal from '../components/dashboard/student/modals/AssistanceJourneyModal';
+import StudentVerificationHub from '../components/dashboard/student/StudentVerificationHub';
+
+interface StudentUser {
+    _id?: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    studentProfile?: {
+        _id?: string;
+        studentId?: string;
+        department?: string;
+        course?: string;
+        yearLevel?: number | string;
+        section?: string;
+        verificationStatus?: 'pending' | 'approved' | 'declined';
+        documents?: {
+            corUrl?: string;
+            idCardUrl?: string;
+            submittedAt?: string;
+        };
+        verificationDetails?: {
+            reviewedAt?: string;
+            declineReason?: string;
+        };
+        isResubmitted?: boolean;
+    };
+    token?: string;
+}
+
+export interface CaseItem {
+    _id: string;
+    createdAt: string;
+    title?: string;
+    category?: string;
+    status?: string;
+    updatedAt?: string;
+    admin?: {
+        firstName?: string;
+        lastName?: string;
+        [key: string]: unknown;
+    };
+    referralTracking?: {
+        latestStatusPhysical?: string;
+        latestStatusMental?: string;
+        behaviorStatus?: string;
+    };
+    [key: string]: unknown;
+}
+
+export interface ReportItem {
+    _id?: string;
+    type?: string;
+    description?: string;
+    priority?: string;
+    status?: string;
+    createdAt?: string;
+    adminNote?: string;
+    remarks?: string;
+    [key: string]: unknown;
+}
+
+interface AppointmentItem {
+    _id: string;
+    status: string;
+    date: string | Date;
+    timeSlot: string;
+    [key: string]: unknown;
+}
+
+interface AssistanceRequestItem {
+    _id?: string;
+    status?: string;
+    type?: string;
+    [key: string]: unknown;
+}
+
+interface AssistanceData {
+    type?: string;
+    householdIncome: string;
+    parentOccupation: string;
+    numberOfDependents: string;
+    gpa: string;
+    documentType: string;
+    documentReference: string;
+    additionalDocs: string;
+    availableDate?: string;
+    contactNumber?: string;
+    additionalNotes?: string;
+    [key: string]: unknown;
+}
+
+interface AnnouncementBannerState {
+    isActive: boolean;
+    message: string;
+    type: 'info' | 'warning' | 'alert';
+}
 
 const StudentDashboard = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<StudentUser | null>(null);
+    const [announcementBanner, setAnnouncementBanner] = useState<AnnouncementBannerState | null>(null);
     const [activeTab, setActiveTab] = useState('overview');
-    const [cases, setCases] = useState<any[]>([]);
-    const [reports, setReports] = useState<any[]>([]);
+    const [cases, setCases] = useState<CaseItem[]>([]);
+    const [reports, setReports] = useState<ReportItem[]>([]);
     const [isCasesLoading, setIsCasesLoading] = useState(true);
     const [isReportsLoading, setIsReportsLoading] = useState(true);
 
-    const [notifications, setNotifications] = useState<any[]>([]);
-    const [prevUnreadCount, setPrevUnreadCount] = useState(0);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const hasInitializedNotificationsRef = useRef(false);
+    const prevUnreadCountRef = useRef(0);
     const [showNotifications, setShowNotifications] = useState(false);
-    const [viewingNotification, setViewingNotification] = useState<any>(null);
+    const [viewingNotification, setViewingNotification] = useState<NotificationItem | null>(null);
+    const [dismissedUnreadBanner, setDismissedUnreadBanner] = useState(false);
 
     // Counseling States
-    const [appointments, setAppointments] = useState<any[]>([]);
+    const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
     const [isAppointmentsLoading, setIsAppointmentsLoading] = useState(true);
     const [showCounselingModal, setShowCounselingModal] = useState(false);
     const [counselingDate, setCounselingDate] = useState('');
@@ -51,7 +153,7 @@ const StudentDashboard = () => {
     const [isSlotsLoading, setIsSlotsLoading] = useState(false);
 
     const [showReportModal, setShowReportModal] = useState(false);
-    const [selectedViewReport, setSelectedViewReport] = useState<any>(null);
+    const [selectedViewReport, setSelectedViewReport] = useState<ReportItem | null>(null);
     const [reportPage, setReportPage] = useState(1);
     const reportsPerPage = 10;
     const [newReport, setNewReport] = useState({
@@ -60,10 +162,10 @@ const StudentDashboard = () => {
         priority: 'Medium'
     });
 
-    const [assistanceRequest, setAssistanceRequest] = useState<any>(null);
+    const [assistanceRequest, setAssistanceRequest] = useState<AssistanceRequestItem | null>(null);
     const [showAssistanceModal, setShowAssistanceModal] = useState(false);
     const [assistanceStep, setAssistanceStep] = useState(1);
-    const [assistanceData, setAssistanceData] = useState<any>({
+    const [assistanceData, setAssistanceData] = useState<AssistanceData>({
         householdIncome: '',
         parentOccupation: '',
         numberOfDependents: '',
@@ -79,7 +181,7 @@ const StudentDashboard = () => {
     });
 
     const handleLogout = () => {
-        localStorage.removeItem('userInfo');
+        authStorage.removeStudent();
         navigate('/', { replace: true });
     };
 
@@ -118,7 +220,28 @@ const StudentDashboard = () => {
             const { data } = await axios.get('/api/notifications', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setNotifications(data);
+            const list: NotificationItem[] = Array.isArray(data) ? data : [];
+            const unread = list.filter(n => !n.isRead);
+
+            if (hasInitializedNotificationsRef.current && unread.length > prevUnreadCountRef.current) {
+                const latest = unread[0];
+                if (latest) {
+                    setDismissedUnreadBanner(false);
+                    toast.info(latest.title, {
+                        id: 'student-new-notification',
+                        description: `${latest.message.substring(0, 80)}${latest.message.length > 80 ? '...' : ''}`,
+                        duration: 5000,
+                        action: {
+                            label: 'View',
+                            onClick: () => setViewingNotification(latest),
+                        },
+                    });
+                }
+            }
+
+            hasInitializedNotificationsRef.current = true;
+            prevUnreadCountRef.current = unread.length;
+            setNotifications(list);
         } catch (error) {
             console.error("Error fetching notifications", error);
         }
@@ -154,57 +277,61 @@ const StudentDashboard = () => {
 
     const handleAssistanceSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // If not on the final step, just advance to the next step
+        if (assistanceStep < 3) {
+            setAssistanceStep(prev => prev + 1);
+            return;
+        }
+
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-            const stepData: Record<string, any> = {};
-
-            if (assistanceStep === 1) {
-                stepData.householdIncome = assistanceData.householdIncome;
-                stepData.parentOccupation = assistanceData.parentOccupation;
-                stepData.numberOfDependents = assistanceData.numberOfDependents;
-                stepData.gpa = assistanceData.gpa;
-            } else if (assistanceStep === 2) {
-                stepData.documentType = assistanceData.documentType;
-                stepData.documentReference = assistanceData.documentReference;
-                stepData.additionalDocs = assistanceData.additionalDocs;
-            } else if (assistanceStep === 3) {
-                stepData.availableDate = assistanceData.availableDate;
-                stepData.contactNumber = assistanceData.contactNumber;
-                stepData.additionalNotes = assistanceData.additionalNotes;
-            }
-
-            await axios.put('/api/assistance/update-step', {
-                step: assistanceStep,
-                data: stepData
+            const userInfo = authStorage.getStudent() || {};
+            await axios.post('/api/assistance/apply', {
+                type: assistanceData.type,
+                householdIncome: assistanceData.householdIncome,
+                parentOccupation: assistanceData.parentOccupation,
+                numberOfDependents: Number(assistanceData.numberOfDependents),
+                gpa: assistanceData.gpa,
+                documentType: assistanceData.documentType,
+                documentReference: assistanceData.documentReference,
+                additionalDocs: assistanceData.additionalDocs,
+                availableDate: assistanceData.availableDate,
+                contactNumber: assistanceData.contactNumber,
+                additionalNotes: assistanceData.additionalNotes
             }, {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
 
-            toast.success(`Step ${assistanceStep} submitted for review!`);
-            fetchAssistanceRequest(userInfo.token);
+            toast.success("Application submitted successfully for administrative review!");
+            fetchAssistanceRequest(userInfo.token || '');
             setShowAssistanceModal(false);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Error submitting data");
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            toast.error(err.response?.data?.message || "Error submitting application");
         }
     };
 
-    const startAssistanceJourney = async (type: string) => {
-        try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-            await axios.post('/api/assistance/request', { type }, {
-                headers: { Authorization: `Bearer ${userInfo.token}` }
-            });
-            fetchAssistanceRequest(userInfo.token);
-            setAssistanceStep(1);
-            setShowAssistanceModal(true);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Error starting journey");
-        }
+    const startAssistanceJourney = (type: string) => {
+        setAssistanceData({
+            type,
+            householdIncome: '',
+            parentOccupation: '',
+            numberOfDependents: '',
+            gpa: '',
+            documentType: '',
+            documentReference: '',
+            additionalDocs: '',
+            availableDate: '',
+            contactNumber: '',
+            additionalNotes: ''
+        });
+        setAssistanceStep(1);
+        setShowAssistanceModal(true);
     };
 
     const markNotificationAsRead = async (id: string) => {
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getStudent() || {};
             await axios.put(`/api/notifications/${id}/read`, {}, {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
@@ -215,42 +342,32 @@ const StudentDashboard = () => {
     };
 
     useEffect(() => {
-        const userInfo = localStorage.getItem('userInfo');
-        if (!userInfo) {
+        const parsedUser = authStorage.getStudent();
+        if (!parsedUser || parsedUser.role !== 'student') {
             navigate('/', { replace: true });
             return;
         } else {
-            const parsedUser = JSON.parse(userInfo);
-            if (parsedUser.role !== 'student') {
-                navigate('/', { replace: true });
-                return;
-            }
-            setUser(parsedUser);
-            fetchUserCases(parsedUser.token);
-            fetchUserReports(parsedUser.token);
-            fetchNotifications(parsedUser.token);
-            fetchAppointments(parsedUser.token);
-            fetchAssistanceRequest(parsedUser.token);
+            setUser(parsedUser as StudentUser);
+            fetchUserCases(parsedUser.token as string);
+            fetchUserReports(parsedUser.token as string);
+            fetchNotifications(parsedUser.token as string);
+            fetchAppointments(parsedUser.token as string);
+            fetchAssistanceRequest(parsedUser.token as string);
+
+            // Fetch public announcement banner
+            axios.get('/api/settings/public')
+                .then(({ data }) => {
+                    if (data?.announcementBanner) {
+                        setAnnouncementBanner(data.announcementBanner);
+                    }
+                })
+                .catch(() => {});
 
             // Set up polling for new notifications every 30 seconds
-            const interval = setInterval(() => fetchNotifications(parsedUser.token), 30000);
+            const interval = setInterval(() => fetchNotifications(parsedUser.token as string), 30000);
             return () => clearInterval(interval);
         }
     }, [navigate]);
-
-    useEffect(() => {
-        const unreadCount = notifications.filter(n => !n.isRead).length;
-        if (unreadCount > prevUnreadCount) {
-            const latest = notifications.filter(n => !n.isRead)[0];
-            if (latest) {
-                toast.info(`🔔 ${latest.title}: ${latest.message.substring(0, 60)}${latest.message.length > 60 ? '...' : ''}`, {
-                    position: "top-right",
-                    autoClose: 5000
-                });
-            }
-        }
-        setPrevUnreadCount(unreadCount);
-    }, [notifications, prevUnreadCount]);
 
     if (!user) return (
         <div className="min-h-screen bg-bg-light flex items-center justify-center font-sans">
@@ -261,10 +378,11 @@ const StudentDashboard = () => {
         </div>
     );
 
-    const latestCase = cases.length > 0 ? [...cases].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] : null;
+    const latestCase = cases.length > 0 ? [...cases].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] : null;
 
     const studentData = {
         studentId: user.studentProfile?.studentId || "N/A",
+        department: user.studentProfile?.department || "N/A",
         course: user.studentProfile?.course || "N/A",
         yearLevel: user.studentProfile?.yearLevel || 0,
         section: user.studentProfile?.section || "N/A",
@@ -307,17 +425,18 @@ const StudentDashboard = () => {
     const handleCreateReport = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getStudent() || {};
             await axios.post('/api/reports', newReport, {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
             setShowReportModal(false);
             setNewReport({ type: 'General Guidance', description: '', priority: 'Medium' });
-            fetchUserReports(userInfo.token);
+            fetchUserReports(userInfo.token || '');
             toast.success("Support report submitted successfully.");
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
             console.error("Error creating report", error);
-            toast.error(error.response?.data?.message || 'Error creating report');
+            toast.error(err.response?.data?.message || 'Error creating report');
         }
     };
 
@@ -329,7 +448,7 @@ const StudentDashboard = () => {
         setCounselingTime('');
         setIsSlotsLoading(true);
 
-        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        const userInfo = authStorage.getStudent() || {};
         axios.get(`/api/counseling/available-slots?date=${selectedDate}`, {
             headers: { Authorization: `Bearer ${userInfo.token}` }
         }).then(res => {
@@ -347,7 +466,7 @@ const StudentDashboard = () => {
     const handleCreateAppointment = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getStudent() || {};
             await axios.post('/api/counseling/request', {
                 date: counselingDate,
                 timeSlot: counselingTime,
@@ -360,13 +479,26 @@ const StudentDashboard = () => {
             setCounselingTime('');
             setCounselingReason('');
             setAvailableSlots([]);
-            fetchAppointments(userInfo.token);
+            fetchAppointments(userInfo.token || '');
             toast.success('Counseling appointment requested securely.');
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
             console.error("Error creating appointment", error);
-            toast.error(error.response?.data?.message || 'Error requesting appointment');
+            toast.error(err.response?.data?.message || 'Error requesting appointment');
         }
     };
+
+    const verificationStatus = user?.studentProfile?.verificationStatus;
+
+    if (user && (verificationStatus === 'pending' || verificationStatus === 'declined')) {
+        return (
+            <StudentVerificationHub
+                user={user}
+                onUserUpdate={(updated) => setUser(prev => prev ? ({ ...prev, ...updated, role: prev.role } as StudentUser) : null)}
+                handleLogout={handleLogout}
+            />
+        );
+    }
 
     return (
         <DashboardLayout>
@@ -377,7 +509,7 @@ const StudentDashboard = () => {
                 setActiveTab={setActiveTab}
                 handleLogout={handleLogout}
             />
-            <main className="flex-1 h-screen overflow-y-auto relative p-6 md:p-12 custom-scrollbar">
+            <main className="flex-1 min-h-screen md:h-screen overflow-y-auto relative p-4 sm:p-6 md:p-10 lg:p-12 custom-scrollbar">
                 <StudentHeader
                     user={user}
                     notifications={notifications}
@@ -386,8 +518,69 @@ const StudentDashboard = () => {
                     markNotificationAsRead={markNotificationAsRead}
                     viewingNotification={viewingNotification}
                     setViewingNotification={setViewingNotification}
-                    setActiveTab={setActiveTab}
                 />
+
+                {/* University Announcement Banner */}
+                {announcementBanner?.isActive && announcementBanner?.message && (
+                    <div className={`p-4 sm:p-5 rounded-2xl border flex items-center justify-between gap-4 mb-6 shadow-sm ${
+                        announcementBanner.type === 'alert'
+                            ? 'bg-rose-50 border-rose-200 text-rose-900'
+                            : announcementBanner.type === 'warning'
+                            ? 'bg-amber-50 border-amber-200 text-amber-900'
+                            : 'bg-blue-50 border-blue-200 text-blue-900'
+                    }`}>
+                        <div className="flex items-center gap-3.5">
+                            {announcementBanner.type === 'alert' && <AlertCircle size={22} className="text-rose-600 shrink-0" />}
+                            {announcementBanner.type === 'warning' && <AlertTriangle size={22} className="text-amber-600 shrink-0" />}
+                            {announcementBanner.type === 'info' && <Info size={22} className="text-blue-600 shrink-0" />}
+                            <span className="text-xs sm:text-sm font-bold leading-relaxed">{announcementBanner.message}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Unread Updates Notification Banner (Persistent until viewed or dismissed) */}
+                {(() => {
+                    const unreadList = notifications.filter(n => !n.isRead);
+                    if (unreadList.length === 0 || dismissedUnreadBanner) return null;
+                    const latestUnread = unreadList[0];
+                    return (
+                        <div className="p-4 sm:p-5 rounded-2xl border border-sky-200 bg-sky-50/90 text-sky-950 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shadow-xs">
+                            <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                                    <BellRing size={20} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-extrabold text-sky-950">
+                                        {unreadList.length === 1
+                                            ? latestUnread.title
+                                            : `${unreadList.length} Unread Notifications — Latest: ${latestUnread.title}`}
+                                    </p>
+                                    <p className="text-xs text-sky-800/90 font-medium truncate sm:whitespace-normal">
+                                        {latestUnread.message}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                <button
+                                    onClick={() => {
+                                        setViewingNotification(latestUnread);
+                                        markNotificationAsRead(latestUnread._id);
+                                    }}
+                                    className="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                                >
+                                    View Update
+                                </button>
+                                <button
+                                    onClick={() => setDismissedUnreadBanner(true)}
+                                    className="p-2 rounded-xl text-sky-700 hover:bg-sky-100 transition-colors cursor-pointer"
+                                    aria-label="Dismiss notification banner"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 <AnimatePresence mode="wait">
                     {activeTab === 'overview' && (
@@ -432,8 +625,7 @@ const StudentDashboard = () => {
                         <GrantsTab
                             key="grants"
                             assistanceRequest={assistanceRequest}
-                            setShowAssistanceModal={setShowAssistanceModal}
-                            setAssistanceStep={setAssistanceStep}
+                            startAssistanceJourney={startAssistanceJourney}
                         />
                     )}
                     {activeTab === 'settings' && <SettingsTab key="settings" />}
@@ -471,11 +663,8 @@ const StudentDashboard = () => {
                 <AssistanceJourneyModal
                     showAssistanceModal={showAssistanceModal}
                     setShowAssistanceModal={setShowAssistanceModal}
-                    assistanceRequest={assistanceRequest}
-                    assistanceStep={assistanceStep}
                     assistanceData={assistanceData}
                     setAssistanceData={setAssistanceData}
-                    startAssistanceJourney={startAssistanceJourney}
                     handleAssistanceSubmit={handleAssistanceSubmit}
                 />
             </main>

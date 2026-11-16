@@ -22,13 +22,14 @@ const CounselingAppointments: React.FC<CounselingAppointmentsProps> = ({
         >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight uppercase">Counseling Appointments</h1>
-                    <p className="text-gray-500 font-medium text-lg mt-1 italic">Review and manage private session requests.</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight uppercase">Counseling Appointments</h1>
+                    <p className="text-gray-500 font-medium text-sm sm:text-base lg:text-lg mt-1 italic">Review and manage private session requests.</p>
                 </div>
             </div>
 
-            <div className="bg-white rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
-                <table className="w-full text-left border-collapse">
+            <div className="glass-slab rounded-3xl sm:rounded-[3rem] overflow-hidden">
+                <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[680px]">
                     <thead>
                         <tr className="bg-gray-50/50 text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] border-b border-gray-100">
                             <th className="px-8 py-6 font-black text-left">Requesting Student</th>
@@ -76,7 +77,7 @@ const CounselingAppointments: React.FC<CounselingAppointmentsProps> = ({
                                             <Clock size={12} /> {app.timeSlot}
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6 text-gray-600 text-sm max-w-[240px] truncate italic font-medium">
+                                    <td className="px-8 py-6 text-gray-600 text-sm max-w-60 truncate italic font-medium">
                                         "{app.reason}"
                                     </td>
                                     <td className="px-8 py-6">
@@ -102,6 +103,7 @@ const CounselingAppointments: React.FC<CounselingAppointmentsProps> = ({
                         )}
                     </tbody>
                 </table>
+                </div>
             </div>
         </motion.div>
     );

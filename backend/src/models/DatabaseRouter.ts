@@ -4,6 +4,8 @@ import { appointmentSchema } from '../models/AppointmentModel';
 import { Model } from 'mongoose';
 import './StudentModel';
 import './FacultyModel';
+import './DepartmentModel';
+import './CourseModel';
 
 // User Models
 export const MainUser: Model<IUser> = mainDb.model<IUser>('User', UserSchema);

@@ -2,9 +2,18 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Calendar } from 'lucide-react';
 
+export interface AppointmentItem {
+    _id: string;
+    date: string | Date;
+    status: string;
+    timeSlot: string;
+    adminNotes?: string;
+    [key: string]: unknown;
+}
+
 interface AppointmentsTabProps {
     isAppointmentsLoading: boolean;
-    appointments: any[];
+    appointments: AppointmentItem[];
     setShowCounselingModal: (show: boolean) => void;
 }
 
@@ -23,19 +32,19 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
         >
             <div className="grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
-                    <section className="glass p-8 rounded-[2.5rem] border border-white/20">
+                    <section className="glass-slab p-8 rounded-[2.5rem]">
                         <h3 className="text-2xl font-black text-gray-900 mb-8 border-b border-gray-100 pb-4">My Private Consultations</h3>
                         <div className="space-y-6">
                             {isAppointmentsLoading ? (
                                 <div className="p-10 text-center text-gray-400 font-bold">Checking Schedule...</div>
                             ) : appointments.length > 0 ? (
-                                appointments.map((app: any) => {
+                                appointments.map((app) => {
                                     const appDate = new Date(app.date);
                                     const month = appDate.toLocaleString('default', { month: 'short' });
                                     const day = appDate.getDate();
 
                                     return (
-                                        <div key={app._id} className="p-8 bg-white/60 backdrop-blur-sm rounded-[2rem] border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group hover:border-primary-main transition-all">
+                                        <div key={app._id} className="p-8 glass-slab-interactive rounded-4xl flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group transition-all">
                                             <div className={`absolute top-0 right-0 w-32 h-20 bg-${app.status === 'Approved' ? 'green' : 'primary'}-light/10 rounded-bl-[4rem] group-hover:scale-110 transition-transform`}></div>
                                             <div className={`w-24 h-24 ${app.status === 'Approved' ? 'bg-green-600' : 'bg-primary-main'} text-white rounded-3xl flex flex-col items-center justify-center shadow-lg transition-colors`}>
                                                 <span className="text-xs font-bold uppercase tracking-widest opacity-80">{month}</span>
@@ -74,7 +83,7 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
                     </section>
                 </div>
 
-                <section className="glass p-8 rounded-[2.5rem] border border-white/20 flex flex-col h-full bg-gradient-to-b from-white/40 to-white/10">
+                <section className="glass-slab p-8 rounded-[2.5rem] flex flex-col h-full">
                     <div className="w-16 h-16 bg-accent-main/10 rounded-2xl flex items-center justify-center text-accent-main mb-6">
                         <Calendar size={32} />
                     </div>

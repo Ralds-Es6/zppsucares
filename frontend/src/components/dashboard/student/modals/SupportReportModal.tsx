@@ -20,18 +20,18 @@ const SupportReportModal: React.FC<SupportReportModalProps> = ({
     return (
         <AnimatePresence>
             {showReportModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
+                <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                        className="bg-white w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl relative overflow-hidden"
+                        className="glass-modal w-full max-w-2xl rounded-3xl sm:rounded-[3rem] p-5 sm:p-10 relative overflow-y-auto max-h-[90vh]"
                     >
-                        <div className="text-center mb-8">
-                            <div className="w-16 h-16 bg-primary-100 text-primary-main rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <AlertCircle size={32} />
+                        <div className="text-center mb-6 sm:mb-8">
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary-100 text-primary-main rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <AlertCircle size={28} />
                             </div>
-                            <h2 className="text-3xl font-black text-gray-900 tracking-tight">SEEK NEW SUPPORT</h2>
+                            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">SEEK NEW SUPPORT</h2>
                             <p className="text-gray-500 font-medium italic">"Every concern matters. Tell us what's on your mind."</p>
                         </div>
 
@@ -63,7 +63,7 @@ const SupportReportModal: React.FC<SupportReportModalProps> = ({
                                 ></textarea>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Urgency Level</label>
                                     <select

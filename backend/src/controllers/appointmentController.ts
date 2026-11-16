@@ -219,7 +219,7 @@ export const getMyAppointments = async (req: Request, res: Response): Promise<vo
 export const getAllAppointments = async (req: Request, res: Response): Promise<void> => {
     try {
         const role = (req as any).user.role;
-        if (role !== 'admin') {
+        if (role !== 'admin' && role !== 'subadmin') {
             res.status(403).json({ success: false, message: 'Forbidden' });
             return;
         }
@@ -254,7 +254,7 @@ export const updateAppointmentStatus = async (req: Request, res: Response): Prom
         const { status, adminNotes } = req.body;
         const role = (req as any).user.role;
 
-        if (role !== 'admin') {
+        if (role !== 'admin' && role !== 'subadmin') {
             res.status(403).json({ success: false, message: 'Forbidden' });
             return;
         }

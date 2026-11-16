@@ -14,20 +14,20 @@ const ViewReportModal: React.FC<ViewReportModalProps> = ({
     return (
         <AnimatePresence>
             {selectedViewReport && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
+                <div className="fixed inset-0 z-110 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0, y: 40 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 40 }}
-                        className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative overflow-hidden z-10 flex flex-col max-h-[85vh]"
+                        className="glass-modal w-full max-w-2xl rounded-3xl sm:rounded-[3rem] relative overflow-hidden z-10 flex flex-col max-h-[85vh]"
                     >
                         {/* Modal Header */}
-                        <div className="p-10 pb-6 border-b border-gray-100 relative">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-bl-[4rem] -z-0"></div>
-                            <div className="flex justify-between items-start relative z-10">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-3">
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">{selectedViewReport.type}</h2>
+                        <div className="p-5 sm:p-10 pb-5 sm:pb-6 border-b border-gray-100 relative">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-bl-[4rem] z-0"></div>
+                            <div className="flex justify-between items-start gap-3 relative z-10">
+                                <div className="space-y-1 min-w-0">
+                                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                        <h2 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight">{selectedViewReport.type}</h2>
                                         <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest ${selectedViewReport.priority === 'Critical' ? 'bg-red-100 text-red-600' : selectedViewReport.priority === 'High' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
                                             {selectedViewReport.priority}
                                         </span>
@@ -44,8 +44,8 @@ const ViewReportModal: React.FC<ViewReportModalProps> = ({
                         </div>
 
                         {/* Modal Body */}
-                        <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="flex-1 overflow-y-auto p-5 sm:p-10 space-y-6 sm:space-y-8 custom-scrollbar">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 font-sans">Current Status</p>
                                     <div className="flex items-center gap-2">
@@ -64,7 +64,7 @@ const ViewReportModal: React.FC<ViewReportModalProps> = ({
                                     <FileText size={20} />
                                     <h3 className="font-black uppercase tracking-widest text-xs">Full Description / Facts</h3>
                                 </div>
-                                <div className="bg-gray-50/50 p-8 rounded-[2rem] border border-gray-100">
+                                <div className="bg-gray-50/50 p-8 rounded-4xl border border-gray-100">
                                     <p className="text-gray-700 font-medium leading-relaxed italic text-lg whitespace-pre-wrap">
                                         "{selectedViewReport.description}"
                                     </p>

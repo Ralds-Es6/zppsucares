@@ -1,306 +1,211 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Coins, GraduationCap, Wallet, AlertCircle, ArrowRight, ClipboardCheck } from 'lucide-react';
+import { X, GraduationCap, Wallet, AlertCircle } from 'lucide-react';
 
 interface AssistanceJourneyModalProps {
     showAssistanceModal: boolean;
     setShowAssistanceModal: (show: boolean) => void;
-    assistanceRequest: any;
-    assistanceStep: number;
     assistanceData: any;
     setAssistanceData: (data: any) => void;
-    startAssistanceJourney: (type: string) => void;
     handleAssistanceSubmit: (e: React.FormEvent) => void;
 }
 
 const AssistanceJourneyModal: React.FC<AssistanceJourneyModalProps> = ({
     showAssistanceModal,
     setShowAssistanceModal,
-    assistanceRequest,
-    assistanceStep,
     assistanceData,
     setAssistanceData,
-    startAssistanceJourney,
     handleAssistanceSubmit
 }) => {
+    const getTypeHeader = () => {
+        switch (assistanceData.type) {
+            case 'Academic Scholarship':
+                return { icon: GraduationCap, color: 'text-accent-main bg-accent-light/30 border-accent-light' };
+            case 'Student Grant':
+                return { icon: Wallet, color: 'text-primary-main bg-primary-light border-primary-500/10' };
+            default:
+                return { icon: AlertCircle, color: 'text-red-500 bg-red-50 border-red-100' };
+        }
+    };
+
+    const header = getTypeHeader();
+
     return (
         <AnimatePresence>
             {showAssistanceModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
+                <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0, y: 40 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 40 }}
-                        className="bg-white w-full max-w-2xl rounded-[3rem] p-12 shadow-2xl relative overflow-hidden"
+                        className="glass-modal w-full max-w-4xl rounded-3xl sm:rounded-[3rem] p-5 sm:p-10 relative max-h-[90vh] overflow-y-auto custom-scrollbar"
                     >
                         <button
+                            type="button"
                             onClick={() => setShowAssistanceModal(false)}
-                            className="absolute top-10 right-10 text-gray-300 hover:text-red-500 transition-colors"
+                            className="absolute top-8 right-8 text-gray-300 hover:text-red-500 transition-colors z-10"
                         >
                             <X size={24} />
                         </button>
 
-                        {!assistanceRequest ? (
-                            <div className="space-y-8 animate-in fade-in duration-500">
-                                <div className="text-center">
-                                    <div className="w-20 h-20 bg-primary-100 text-primary-main rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-primary-500/10">
-                                        <Coins size={40} />
-                                    </div>
-                                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">CHOOSE YOUR JOURNEY</h2>
-                                    <p className="text-gray-500 font-medium mt-2 italic">Select the assistance type you wish to apply for.</p>
+                        <form onSubmit={handleAssistanceSubmit} className="space-y-8">
+                            <div className="flex items-center gap-4 pb-6 border-b border-gray-100">
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm ${header.color}`}>
+                                    {header.icon && <header.icon size={28} />}
                                 </div>
-
-                                <div className="grid gap-4">
-                                    {[
-                                        { type: 'Academic Scholarship', icon: GraduationCap, desc: 'For students with outstanding academic performance.', color: 'blue' },
-                                        { type: 'Student Grant', icon: Wallet, desc: 'Financial support based on socio-economic need.', color: 'primary' },
-                                        { type: 'Emergency Assistance', icon: AlertCircle, desc: 'Immediate support for crises or medical emergencies.', color: 'red' }
-                                    ].map((opt) => (
-                                        <button
-                                            key={opt.type}
-                                            onClick={() => startAssistanceJourney(opt.type)}
-                                            className="group flex items-center gap-6 p-6 bg-gray-50 hover:bg-white rounded-3xl border border-gray-50 hover:border-primary-main hover:shadow-2xl transition-all text-left"
-                                        >
-                                            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-primary-main shadow-sm border border-gray-50 group-hover:scale-110 transition-transform">
-                                                <opt.icon size={32} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="font-black text-gray-900 leading-none">{opt.type}</p>
-                                                <p className="text-xs text-gray-500 font-medium mt-2">{opt.desc}</p>
-                                            </div>
-                                            <ArrowRight size={20} className="text-gray-300 group-hover:text-primary-main transition-transform translate-x-0 group-hover:translate-x-2" />
-                                        </button>
-                                    ))}
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Application Form</p>
+                                    <h2 className="text-2xl font-black text-gray-900 tracking-tight mt-1">{assistanceData.type}</h2>
                                 </div>
                             </div>
-                        ) : (
-                            <div className="space-y-8 animate-in slide-in-from-right duration-500">
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-xs font-black text-primary-main uppercase tracking-widest">Step {assistanceStep} of 4</p>
-                                    <div className="flex items-center gap-1">
-                                        {[1, 2, 3, 4].map(s => (
-                                            <div key={s} className={`h-1.5 w-8 rounded-full transition-colors ${s === assistanceStep ? 'bg-primary-main' : s < assistanceStep ? 'bg-green-500' : 'bg-gray-100'}`}></div>
-                                        ))}
-                                    </div>
-                                </div>
 
-                                {assistanceStep === 1 && (
-                                    <form onSubmit={handleAssistanceSubmit} className="space-y-8">
-                                        <div>
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tight">SOCIO-ECONOMIC PROFILING</h2>
-                                            <p className="text-gray-500 font-medium">Please provide your household financial details for verification.</p>
+                            <div className="grid md:grid-cols-2 gap-8">
+                                <div className="space-y-6">
+                                    <div className="p-6 bg-gray-50/50 rounded-3xl border border-gray-100 space-y-4">
+                                        <h3 className="text-xs font-black text-primary-main uppercase tracking-widest">1. Socio-Economic Profile</h3>
+                                        
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Household Monthly Income</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                placeholder="e.g. PHP 25,000"
+                                                value={assistanceData.householdIncome}
+                                                onChange={(e) => setAssistanceData({ ...assistanceData, householdIncome: e.target.value })}
+                                                className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm"
+                                            />
                                         </div>
 
-                                        <div className="grid md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Parent Occupation</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                placeholder="e.g. Farmer / OFW"
+                                                value={assistanceData.parentOccupation}
+                                                onChange={(e) => setAssistanceData({ ...assistanceData, parentOccupation: e.target.value })}
+                                                className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Household Monthly Income</label>
-                                                <input
-                                                    required
-                                                    type="text"
-                                                    placeholder="e.g. PHP 25,000"
-                                                    value={assistanceData.householdIncome}
-                                                    onChange={(e) => setAssistanceData({ ...assistanceData, householdIncome: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Parent Occupation</label>
-                                                <input
-                                                    required
-                                                    type="text"
-                                                    placeholder="e.g. Farmer / OFW"
-                                                    value={assistanceData.parentOccupation}
-                                                    onChange={(e) => setAssistanceData({ ...assistanceData, parentOccupation: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Number of Dependents</label>
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">No. of Dependents</label>
                                                 <input
                                                     required
                                                     type="number"
-                                                    placeholder="Total household members"
+                                                    placeholder="Total members"
                                                     value={assistanceData.numberOfDependents}
                                                     onChange={(e) => setAssistanceData({ ...assistanceData, numberOfDependents: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800"
+                                                    className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Current GPA / Average</label>
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Current GPA</label>
                                                 <input
                                                     required
                                                     type="text"
                                                     placeholder="e.g. 1.75"
                                                     value={assistanceData.gpa}
                                                     onChange={(e) => setAssistanceData({ ...assistanceData, gpa: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800"
+                                                    className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm"
                                                 />
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
 
-                                        <div className="flex gap-4 pt-4">
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowAssistanceModal(false)}
-                                                className="flex-1 py-5 bg-gray-100 text-gray-500 rounded-[2rem] font-black uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
+                                <div className="space-y-6">
+                                    <div className="p-6 bg-gray-50/50 rounded-3xl border border-gray-100 space-y-4">
+                                        <h3 className="text-xs font-black text-primary-main uppercase tracking-widest">2. Document Info & Verification</h3>
+                                        
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Primary Document Type</label>
+                                            <select
+                                                required
+                                                value={assistanceData.documentType}
+                                                onChange={(e) => setAssistanceData({ ...assistanceData, documentType: e.target.value })}
+                                                className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm appearance-none"
                                             >
-                                                Save Progress
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="flex-1 py-5 bg-primary-main text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-primary-main/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                Finalize Step 1 <ArrowRight size={18} />
-                                            </button>
-                                        </div>
-                                    </form>
-                                )}
-
-                                {assistanceStep === 2 && (
-                                    <form onSubmit={handleAssistanceSubmit} className="space-y-8">
-                                        <div>
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tight">DOCUMENTATION</h2>
-                                            <p className="text-gray-500 font-medium">Provide your supporting document details for verification.</p>
+                                                <option value="">Select document type...</option>
+                                                <option value="Certificate of Indigency">Certificate of Indigency</option>
+                                                <option value="Barangay Certificate">Barangay Certificate</option>
+                                                <option value="Income Tax Return">Income Tax Return (ITR)</option>
+                                                <option value="DSWD Certificate">DSWD Certificate</option>
+                                                <option value="Medical Certificate">Medical Certificate</option>
+                                                <option value="Other">Other</option>
+                                            </select>
                                         </div>
 
-                                        <div className="space-y-6">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Primary Document Type</label>
-                                                <select
-                                                    required
-                                                    value={assistanceData.documentType}
-                                                    onChange={(e) => setAssistanceData({ ...assistanceData, documentType: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800 appearance-none"
-                                                >
-                                                    <option value="">Select document type...</option>
-                                                    <option value="Certificate of Indigency">Certificate of Indigency</option>
-                                                    <option value="Barangay Certificate">Barangay Certificate</option>
-                                                    <option value="Income Tax Return">Income Tax Return (ITR)</option>
-                                                    <option value="DSWD Certificate">DSWD Certificate</option>
-                                                    <option value="Medical Certificate">Medical Certificate</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Document Reference / Control No.</label>
-                                                <input
-                                                    required
-                                                    type="text"
-                                                    placeholder="e.g. CERT-2026-00123"
-                                                    value={assistanceData.documentReference}
-                                                    onChange={(e) => setAssistanceData({ ...assistanceData, documentReference: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Additional Documents / Notes</label>
-                                                <textarea
-                                                    rows={3}
-                                                    placeholder="List any additional supporting documents you have..."
-                                                    value={assistanceData.additionalDocs}
-                                                    onChange={(e) => setAssistanceData({ ...assistanceData, additionalDocs: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800 resize-none"
-                                                />
-                                            </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Reference / Control No.</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                placeholder="e.g. CERT-2026-00123"
+                                                value={assistanceData.documentReference}
+                                                onChange={(e) => setAssistanceData({ ...assistanceData, documentReference: e.target.value })}
+                                                className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm"
+                                            />
                                         </div>
 
-                                        <div className="flex gap-4 pt-4">
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowAssistanceModal(false)}
-                                                className="flex-1 py-5 bg-gray-100 text-gray-500 rounded-[2rem] font-black uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
-                                            >
-                                                Save Progress
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="flex-1 py-5 bg-primary-main text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-primary-main/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                Finalize Step 2 <ArrowRight size={18} />
-                                            </button>
-                                        </div>
-                                    </form>
-                                )}
-
-                                {assistanceStep === 3 && (
-                                    <form onSubmit={handleAssistanceSubmit} className="space-y-8">
-                                        <div>
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tight">VERIFICATION / INTERVIEW</h2>
-                                            <p className="text-gray-500 font-medium">Provide your availability and contact details for the verification interview.</p>
-                                        </div>
-
-                                        <div className="space-y-6">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Preferred Interview Date</label>
-                                                <input
-                                                    required
-                                                    type="date"
-                                                    value={assistanceData.availableDate}
-                                                    onChange={(e) => setAssistanceData({ ...assistanceData, availableDate: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Contact Number</label>
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact Number</label>
                                                 <input
                                                     required
                                                     type="tel"
                                                     placeholder="e.g. 09171234567"
                                                     value={assistanceData.contactNumber}
                                                     onChange={(e) => setAssistanceData({ ...assistanceData, contactNumber: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800"
+                                                    className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Additional Notes for Interviewer</label>
-                                                <textarea
-                                                    rows={3}
-                                                    placeholder="Any special circumstances or information the interviewer should know..."
-                                                    value={assistanceData.additionalNotes}
-                                                    onChange={(e) => setAssistanceData({ ...assistanceData, additionalNotes: e.target.value })}
-                                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-primary-main focus:bg-white transition-all font-bold text-gray-800 resize-none"
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Preferred Date</label>
+                                                <input
+                                                    required
+                                                    type="date"
+                                                    value={assistanceData.availableDate}
+                                                    onChange={(e) => setAssistanceData({ ...assistanceData, availableDate: e.target.value })}
+                                                    className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm"
                                                 />
                                             </div>
                                         </div>
-
-                                        <div className="flex gap-4 pt-4">
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowAssistanceModal(false)}
-                                                className="flex-1 py-5 bg-gray-100 text-gray-500 rounded-[2rem] font-black uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
-                                            >
-                                                Save Progress
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="flex-1 py-5 bg-primary-main text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-primary-main/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                Finalize Step 3 <ArrowRight size={18} />
-                                            </button>
-                                        </div>
-                                    </form>
-                                )}
-
-                                {assistanceStep === 4 && (
-                                    <div className="space-y-8 text-center py-8">
-                                        <div className="w-24 h-24 bg-yellow-100 text-yellow-600 rounded-[2rem] flex items-center justify-center mx-auto">
-                                            <ClipboardCheck size={48} />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tight">FINAL REVIEW</h2>
-                                            <p className="text-gray-500 font-medium mt-2">Your application is now under final review by the administration team.</p>
-                                            <p className="text-xs text-gray-400 mt-4 max-w-sm mx-auto leading-relaxed">No further action is required from you at this time. You will receive a notification once a decision has been made on your application.</p>
-                                        </div>
-                                        <button
-                                            onClick={() => setShowAssistanceModal(false)}
-                                            className="px-10 py-5 bg-gray-100 text-gray-600 rounded-[2rem] font-black uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
-                                        >
-                                            Close & Wait for Update
-                                        </button>
                                     </div>
-                                )}
+                                </div>
                             </div>
-                        )}
+
+                            <div className="p-6 bg-gray-50/50 rounded-3xl border border-gray-100 space-y-4">
+                                <h3 className="text-xs font-black text-primary-main uppercase tracking-widest">3. Additional Remarks</h3>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes / Circumstances (Optional)</label>
+                                    <textarea
+                                        rows={3}
+                                        placeholder="Any special remarks or comments you'd like to share with the evaluation committee..."
+                                        value={assistanceData.additionalNotes}
+                                        onChange={(e) => setAssistanceData({ ...assistanceData, additionalNotes: e.target.value })}
+                                        className="w-full p-5 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-main focus:ring-1 focus:ring-primary-main/20 transition-all font-bold text-gray-800 text-sm resize-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-4 border-t border-gray-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAssistanceModal(false)}
+                                    className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-green-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                >
+                                    Submit Application
+                                </button>
+                            </div>
+                        </form>
                     </motion.div>
                 </div>
             )}

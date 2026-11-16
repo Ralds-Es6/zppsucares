@@ -14,11 +14,11 @@ const SettingsTab: React.FC = () => {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-8"
         >
-            <section className="glass p-10 rounded-[3rem] border border-white/20">
-                <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Settings & Preferences</h2>
-                <p className="text-gray-500 font-medium mb-12">Manage your account security and portal experience.</p>
+            <section className="glass p-5 sm:p-8 md:p-10 rounded-3xl sm:rounded-[3rem] border border-white/20">
+                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2 tracking-tight">Settings & Preferences</h2>
+                <p className="text-sm sm:text-base text-gray-500 font-medium mb-8 sm:mb-12">Manage your account security and portal experience.</p>
 
-                <div className="grid md:grid-cols-2 gap-12">
+                <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
                     <div className="space-y-10">
                         <div>
                             <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">

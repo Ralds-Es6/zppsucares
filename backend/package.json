@@ -7,9 +7,12 @@
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "seed": "tsx src/scripts/syncSeeders.ts",
+    "seed:all": "tsx src/scripts/syncSeeders.ts && tsx src/scripts/seedAcademic.ts",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "seed:faculty": "tsx src/scripts/seedFaculty.ts",
-    "seed:student": "tsx src/scripts/seedStudent.ts"
+    "seed:student": "tsx src/scripts/seedStudent.ts",
+    "seed:academic": "tsx src/scripts/seedAcademic.ts"
   },
   "keywords": [],
   "author": "frontera",
@@ -21,13 +24,15 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.2"
+    "mongoose": "^9.2.2",
+    "multer": "^2.4.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.3.0",
     "@types/node": "^25.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

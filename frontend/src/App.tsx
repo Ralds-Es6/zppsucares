@@ -6,8 +6,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 
 import StudentDashboard from './pages/StudentDashboard';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { Toaster } from 'sonner';
 
 function App() {
   // We grab the secret paths from .env. If they aren't loaded, default to long random strings 
@@ -17,23 +16,32 @@ function App() {
 
   return (
     <Router>
-      <ToastContainer
-        position="top-right"
-        autoClose={4000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        expand={false}
+        visibleToasts={3}
+        toastOptions={{
+          duration: 4500,
+          className: 'rounded-2xl shadow-xl border border-gray-200/80 font-sans sm:min-w-[390px] px-4 py-3.5',
+          classNames: {
+            title: 'text-sm font-bold leading-snug',
+            description: 'text-xs leading-relaxed opacity-90',
+            actionButton: 'rounded-xl font-bold text-xs px-3 py-1.5',
+          },
+        }}
       />
       <Routes>
         <Route path="/" element={<LandingPage />} />
 
-        {/* Dynamic Secure Routes */}
+        {/* Dynamic Secure Routes & Direct Access Aliases */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLogin />} />
         <Route path={`/${adminPath}`} element={<AdminLogin />} />
+
+        <Route path="/faculty/login" element={<FacultyLogin />} />
+        <Route path="/faculty" element={<FacultyLogin />} />
         <Route path={`/${facultyPath}`} element={<FacultyLogin />} />
 
         {/* Protected Dashboard Routes (Will add auth guards later) */}

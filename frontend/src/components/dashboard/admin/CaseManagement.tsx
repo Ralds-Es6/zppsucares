@@ -2,19 +2,62 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Plus, ChevronRight, X, Eye } from 'lucide-react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
+import { authStorage } from '../../../utils/authStorage';
 
 
+
+export interface CaseItem {
+    _id: string;
+    student?: {
+        _id?: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        studentProfile?: {
+            studentId?: string;
+            course?: string;
+            department?: string;
+            yearLevel?: number | string;
+            section?: string;
+        };
+    };
+    title: string;
+    category?: string;
+    intakeForm?: {
+        facts?: string;
+        verdict?: string;
+    };
+    referralTracking?: {
+        behaviorStatus?: string;
+        latestStatusMental?: string;
+        latestStatusPhysical?: string;
+    };
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface StudentOption {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    studentProfile?: {
+        studentId?: string;
+        department?: string;
+        course?: string;
+    };
+}
 
 const CaseManagement: React.FC = () => {
-    const [cases, setCases] = useState<any[]>([]);
-    const [students, setStudents] = useState<any[]>([]);
+    const [cases, setCases] = useState<CaseItem[]>([]);
+    const [students, setStudents] = useState<StudentOption[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showViewModal, setShowViewModal] = useState(false);
     const [showMentalDropdown, setShowMentalDropdown] = useState(false);
     const [showPhysicalDropdown, setShowPhysicalDropdown] = useState(false);
-    const [selectedCase, setSelectedCase] = useState<any>(null);
+    const [selectedCase, setSelectedCase] = useState<CaseItem | null>(null);
     const [newCase, setNewCase] = useState({
         studentId: '',
         title: '',
@@ -25,7 +68,7 @@ const CaseManagement: React.FC = () => {
 
     const fetchCases = async () => {
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getAdmin() || {};
             const { data } = await axios.get('/api/cases', {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
@@ -39,7 +82,7 @@ const CaseManagement: React.FC = () => {
 
     const fetchStudents = async () => {
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getAdmin() || {};
             const { data } = await axios.get('/api/auth/students', {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
@@ -57,7 +100,7 @@ const CaseManagement: React.FC = () => {
     const handleCreateCase = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getAdmin() || {};
             await axios.post('/api/cases', newCase, {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
@@ -71,42 +114,45 @@ const CaseManagement: React.FC = () => {
                 intakeForm: { facts: '', verdict: '' },
                 referralTracking: { behaviorStatus: 'Normal', latestStatusMental: 'Stable', latestStatusPhysical: 'Healthy' }
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
             console.error("Error creating case", error);
-            toast.error(error.response?.data?.message || "Failed to create case.");
+            toast.error(err.response?.data?.message || "Failed to create case.");
         }
     };
 
     const handleUpdateCase = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!selectedCase) return;
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getAdmin() || {};
             await axios.patch(`/api/cases/${selectedCase._id}/referral`, {
-                latestStatusMental: selectedCase.referralTracking.latestStatusMental,
-                latestStatusPhysical: selectedCase.referralTracking.latestStatusPhysical
+                latestStatusMental: selectedCase.referralTracking?.latestStatusMental,
+                latestStatusPhysical: selectedCase.referralTracking?.latestStatusPhysical
             }, {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
             setShowViewModal(false);
             fetchCases();
             toast.success("Case tracking status updated.");
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
             console.error("Error updating case", error);
-            toast.error(error.response?.data?.message || "Failed to update case.");
+            toast.error(err.response?.data?.message || "Failed to update case.");
         }
     };
 
     return (
         <motion.div key="cases" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight uppercase">Case Management</h1>
-                    <p className="text-gray-500 font-medium text-lg mt-1 italic">Intake, tracking, and monitoring of student incidents.</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight uppercase">Case Management</h1>
+                    <p className="text-gray-500 font-medium text-sm sm:text-base lg:text-lg mt-1 italic">Intake, tracking, and monitoring of student incidents.</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-primary-main text-white px-8 py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-primary-main/25 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3">
+                    className="w-full md:w-auto justify-center bg-primary-main text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl sm:rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary-main/25 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3">
                     <Plus size={20} /> Open New Profiling Case
                 </button>
             </div>
@@ -123,7 +169,7 @@ const CaseManagement: React.FC = () => {
                         <motion.div
                             whileHover={{ y: -5 }}
                             key={c._id}
-                            className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden group border-b-[6px] border-b-gray-100 hover:border-b-primary-main transition-all"
+                            className="glass-slab-interactive p-8 rounded-[3rem] relative overflow-hidden group border-b-[6px] border-b-gray-200/60 hover:border-b-primary-main transition-all"
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-bl-[4rem] -mr-8 -mt-8 transition-colors group-hover:bg-primary-50"></div>
 
@@ -140,7 +186,7 @@ const CaseManagement: React.FC = () => {
                                 <h3 className="text-2xl font-black text-gray-900 mb-2 truncate group-hover:text-primary-main transition-colors uppercase tracking-tight">{c.title}</h3>
                                 <div className="flex items-center gap-3 mb-8">
                                     <div className="w-8 h-8 rounded-full bg-primary-main text-white flex items-center justify-center font-bold text-xs uppercase">
-                                        {c.student?.firstName[0]}{c.student?.lastName[0]}
+                                        {(c.student?.firstName?.[0] || '') + (c.student?.lastName?.[0] || '') || '?'}
                                     </div>
                                     <p className="font-extrabold text-gray-700 text-sm">
                                         {c.student?.firstName} {c.student?.lastName}
@@ -148,7 +194,7 @@ const CaseManagement: React.FC = () => {
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-3 mb-8">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 sm:mb-8">
                                     <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex flex-col items-center">
                                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Behavior</p>
                                         <p className="text-[10px] font-black text-gray-800">{c.referralTracking?.behaviorStatus}</p>
@@ -164,7 +210,7 @@ const CaseManagement: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center justify-between pt-6 border-t border-gray-50">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Opened {new Date(c.createdAt).toLocaleDateString()}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Opened {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'N/A'}</p>
                                     <button
                                         onClick={() => {
                                             setSelectedCase(c);
@@ -190,15 +236,15 @@ const CaseManagement: React.FC = () => {
             {/* Create Case Modal */}
             <AnimatePresence>
                 {showCreateModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
+                    <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-white w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
+                            className="glass-modal w-full max-w-2xl rounded-3xl sm:rounded-[3rem] p-5 sm:p-10 relative max-h-[90vh] overflow-y-auto custom-scrollbar"
                         >
-                            <button onClick={() => setShowCreateModal(false)} className="absolute top-8 right-8 text-gray-400 hover:text-red-500 transition-colors"><X size={24} /></button>
-                            <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight uppercase">OPEN CASE FILE</h2>
+                            <button onClick={() => setShowCreateModal(false)} className="absolute top-5 right-5 sm:top-8 sm:right-8 text-gray-400 hover:text-red-500 transition-colors"><X size={24} /></button>
+                            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2 tracking-tight uppercase pr-8">OPEN CASE FILE</h2>
                             <p className="text-gray-500 font-medium mb-8 italic">Initiate a official profiling and monitoring record.</p>
 
                             <form onSubmit={handleCreateCase} className="space-y-6">
@@ -218,7 +264,7 @@ const CaseManagement: React.FC = () => {
                                         </select>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Case Title</label>
                                             <input
@@ -283,26 +329,26 @@ const CaseManagement: React.FC = () => {
             {/* View/Update Tracking Modal */}
             <AnimatePresence>
                 {showViewModal && selectedCase && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
+                    <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-white w-full max-w-4xl rounded-[3rem] p-12 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
+                            className="glass-modal w-full max-w-4xl rounded-3xl sm:rounded-[3rem] p-5 sm:p-10 lg:p-12 relative max-h-[90vh] overflow-y-auto custom-scrollbar"
                         >
-                            <button onClick={() => setShowViewModal(false)} className="absolute top-10 right-10 text-gray-400 hover:text-red-500 transition-colors"><X size={28} /></button>
+                            <button onClick={() => setShowViewModal(false)} className="absolute top-5 right-5 sm:top-10 sm:right-10 text-gray-400 hover:text-red-500 transition-colors"><X size={26} /></button>
 
-                            <div className="flex flex-col md:flex-row gap-10">
+                            <div className="flex flex-col md:flex-row gap-6 sm:gap-10">
                                 {/* Left Side: Case Info */}
-                                <div className="flex-1 space-y-8">
+                                <div className="flex-1 space-y-6 sm:space-y-8">
                                     <div>
                                         <div className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 bg-primary-100 text-primary-main`}>
                                             Ref: {selectedCase._id}
                                         </div>
-                                        <h2 className="text-4xl font-black text-gray-900 leading-tight uppercase tracking-tight">{selectedCase.title}</h2>
+                                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 leading-tight uppercase tracking-tight pr-6">{selectedCase.title}</h2>
                                         <div className="flex items-center gap-4 mt-4">
                                             <div className="w-12 h-12 rounded-2xl bg-primary-main text-white flex items-center justify-center font-bold text-sm shadow-lg">
-                                                {selectedCase.student?.firstName[0]}{selectedCase.student?.lastName[0]}
+                                                {(selectedCase.student?.firstName?.[0] || '') + (selectedCase.student?.lastName?.[0] || '') || '?'}
                                             </div>
                                             <div>
                                                 <p className="text-xl font-black text-gray-800">{selectedCase.student?.firstName} {selectedCase.student?.lastName}</p>
@@ -312,14 +358,14 @@ const CaseManagement: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-6">
-                                        <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
+                                        <div className="p-6 bg-gray-50 rounded-4xl border border-gray-100">
                                             <h4 className="text-[10px] font-black text-primary-main uppercase tracking-widest mb-3 flex items-center gap-2">
                                                 <Eye size={14} /> Official Intake Facts
                                             </h4>
                                             <p className="text-gray-700 font-medium leading-relaxed italic">"{selectedCase.intakeForm?.facts}"</p>
                                         </div>
 
-                                        <div className="p-6 bg-primary-50/30 rounded-[2rem] border border-primary-100">
+                                        <div className="p-6 bg-primary-50/30 rounded-4xl border border-primary-100">
                                             <h4 className="text-[10px] font-black text-primary-main uppercase tracking-widest mb-3 flex items-center gap-2">
                                                 <Shield size={14} /> Intake Verdict
                                             </h4>
@@ -348,7 +394,7 @@ const CaseManagement: React.FC = () => {
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                                 </div>
                                                 {showMentalDropdown && (
-                                                    <ul className="absolute z-[100] w-full mt-1 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+                                                    <ul className="absolute z-100 w-full mt-1 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
                                                         {['Stable', 'High Stress', 'Crisis Mode', 'Depressive', 'Anxious', 'In Session'].map((status) => (
                                                             <li
                                                                 key={status}
@@ -384,7 +430,7 @@ const CaseManagement: React.FC = () => {
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                                 </div>
                                                 {showPhysicalDropdown && (
-                                                    <ul className="absolute z-[100] w-full mt-1 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+                                                    <ul className="absolute z-100 w-full mt-1 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
                                                         {['Healthy', 'Injured', 'Recovering', 'Needs Assistance'].map((status) => (
                                                             <li
                                                                 key={status}

@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 
 export enum UserRole {
     ADMIN = 'admin',
+    SUBADMIN = 'subadmin',
     FACULTY = 'faculty',
     STUDENT = 'student'
 }
@@ -17,6 +18,8 @@ export interface IUser extends Document {
     // Role specific references (polymorphic relation strategy)
     studentProfile?: mongoose.Types.ObjectId;
     facultyProfile?: mongoose.Types.ObjectId;
+    isSeeder?: boolean;
+    seederKey?: string;
 
     matchPassword(enteredPassword: string): Promise<boolean>;
 }
@@ -55,6 +58,16 @@ const UserSchema = new Schema<IUser>(
         isActive: {
             type: Boolean,
             default: true,
+        },
+        isSeeder: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+        seederKey: {
+            type: String,
+            sparse: true,
+            index: true,
         },
         // References to specialized profile documents
         studentProfile: {

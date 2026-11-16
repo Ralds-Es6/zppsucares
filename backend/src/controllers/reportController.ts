@@ -41,7 +41,7 @@ export const createReport = async (req: Request, res: Response) => {
 export const getReports = async (req: Request, res: Response) => {
     try {
         let reports;
-        if (req.user?.role === 'admin' || req.user?.role === 'faculty') {
+        if (req.user?.role === 'admin' || req.user?.role === 'subadmin' || req.user?.role === 'faculty') {
             reports = await SupportReport.find()
                 .populate({
                     path: 'student',

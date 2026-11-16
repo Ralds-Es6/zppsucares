@@ -7,52 +7,35 @@ export enum AssistanceRequestType {
     EMERGENCY = 'Emergency Assistance'
 }
 
-export enum StepStatus {
-    LOCKED = 'Locked',
-    IN_PROGRESS = 'In Progress',
-    PENDING_REVIEW = 'Pending Review',
-    VERIFIED = 'Verified',
+export enum AssistanceStatus {
+    PENDING = 'Pending Review',
+    APPROVED = 'Approved',
     REJECTED = 'Rejected'
 }
 
 export interface IAssistanceRequest extends Document {
     student: mongoose.Types.ObjectId;
     type: AssistanceRequestType;
-    status: 'Active' | 'Finalized' | 'Cancelled';
+    status: AssistanceStatus;
 
-    // Step 1: Socio-Economic Profiling
-    step1: {
-        status: StepStatus;
-        data?: {
-            householdIncome: string;
-            parentOccupation: string;
-            numberOfDependents: number;
-            gpa: string;
-        };
-        adminNote?: string;
-    };
+    // Socio-Economic Details
+    householdIncome: string;
+    parentOccupation: string;
+    numberOfDependents: number;
+    gpa: string;
 
-    // Step 2: Documentation
-    step2: {
-        status: StepStatus;
-        submittedDocuments: string[];
-        data?: Record<string, any>;
-        adminNote?: string;
-    };
+    // Documentation
+    documentType: string;
+    documentReference: string;
+    additionalDocs?: string;
 
-    // Step 3: Verification / Interview
-    step3: {
-        status: StepStatus;
-        interviewDate?: Date;
-        data?: Record<string, any>;
-        adminNote?: string;
-    };
+    // Contact & Interview Preferences
+    availableDate: Date;
+    contactNumber: string;
+    additionalNotes?: string;
 
-    // Step 4: Final Approval
-    step4: {
-        status: StepStatus;
-        adminNote?: string;
-    };
+    // Admin Review
+    adminNote?: string;
 
     history: {
         action: string;
@@ -75,35 +58,20 @@ const AssistanceRequestSchema = new Schema<IAssistanceRequest>(
         },
         status: {
             type: String,
-            enum: ['Active', 'Finalized', 'Cancelled'],
-            default: 'Active',
+            enum: Object.values(AssistanceStatus),
+            default: AssistanceStatus.PENDING,
         },
-        step1: {
-            status: { type: String, enum: Object.values(StepStatus), default: StepStatus.IN_PROGRESS },
-            data: {
-                householdIncome: String,
-                parentOccupation: String,
-                numberOfDependents: Number,
-                gpa: String,
-            },
-            adminNote: String,
-        },
-        step2: {
-            status: { type: String, enum: Object.values(StepStatus), default: StepStatus.LOCKED },
-            submittedDocuments: [String],
-            data: { type: Schema.Types.Mixed },
-            adminNote: String,
-        },
-        step3: {
-            status: { type: String, enum: Object.values(StepStatus), default: StepStatus.LOCKED },
-            interviewDate: Date,
-            data: { type: Schema.Types.Mixed },
-            adminNote: String,
-        },
-        step4: {
-            status: { type: String, enum: Object.values(StepStatus), default: StepStatus.LOCKED },
-            adminNote: String,
-        },
+        householdIncome: { type: String, required: true },
+        parentOccupation: { type: String, required: true },
+        numberOfDependents: { type: Number, required: true },
+        gpa: { type: String, required: true },
+        documentType: { type: String, required: true },
+        documentReference: { type: String, required: true },
+        additionalDocs: { type: String },
+        availableDate: { type: Date, required: true },
+        contactNumber: { type: String, required: true },
+        additionalNotes: { type: String },
+        adminNote: { type: String },
         history: [
             {
                 action: { type: String, required: true },

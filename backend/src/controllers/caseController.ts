@@ -42,7 +42,7 @@ export const createCase = async (req: Request, res: Response) => {
 export const getCases = async (req: Request, res: Response) => {
     try {
         let cases;
-        if (req.user?.role === 'admin' || req.user?.role === 'faculty') {
+        if (req.user?.role === 'admin' || req.user?.role === 'subadmin' || req.user?.role === 'faculty') {
             cases = await Case.find()
                 .populate({
                     path: 'student',
@@ -73,7 +73,7 @@ export const getCaseById = async (req: Request, res: Response) => {
 
         if (caseInstance) {
             // Check if user is either the admin or the student of the case
-            if (req.user.role === 'admin' || req.user.role === 'faculty' || caseInstance.student._id.toString() === req.user._id.toString()) {
+            if (req.user.role === 'admin' || req.user.role === 'subadmin' || req.user.role === 'faculty' || caseInstance.student._id.toString() === req.user._id.toString()) {
                 res.json(caseInstance);
             } else {
                 res.status(403).json({ message: 'Not authorized to view this case' });

@@ -1,16 +1,20 @@
 import {
     Users, Activity, BrainCircuit, Accessibility,
     AlertCircle, LayoutDashboard, LogOut, Shield,
-    Briefcase, ClipboardCheck, Calendar, ChevronRight
+    Briefcase, ClipboardCheck, Calendar, ChevronRight, User, Menu, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import guidanceLogo from '../assets/guidance_logo.jpeg';
+import { authStorage } from '../utils/authStorage';
+import AnalyticsCharts from '../components/dashboard/shared/AnalyticsCharts';
 
 const FacultyDashboard = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [stats, setStats] = useState({
         totalStudents: 0,
         totalFaculty: 0,
@@ -23,7 +27,7 @@ const FacultyDashboard = () => {
 
     const fetchStats = async () => {
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getFaculty() || {};
             const { data } = await axios.get('/api/stats/admin', {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
@@ -33,14 +37,54 @@ const FacultyDashboard = () => {
         }
     };
 
-    const [reports, setReports] = useState<any[]>([]);
-    const [selectedViewReport, setSelectedViewReport] = useState<any>(null);
+interface FacultyReportItem {
+    _id: string;
+    type?: string;
+    priority?: string;
+    status?: string;
+    description?: string;
+    createdAt: string;
+    adminNote?: string;
+    student?: {
+        firstName: string;
+        lastName: string;
+        studentProfile?: {
+            studentId?: string;
+            [key: string]: unknown;
+        };
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+
+interface FacultyCaseItem {
+    _id: string;
+    title: string;
+    category?: string;
+    status: string;
+    createdAt: string;
+    student?: {
+        firstName: string;
+        lastName: string;
+        [key: string]: unknown;
+    };
+    referralTracking?: {
+        behaviorStatus?: string;
+        latestStatusMental?: string;
+        latestStatusPhysical?: string;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+
+    const [reports, setReports] = useState<FacultyReportItem[]>([]);
+    const [selectedViewReport, setSelectedViewReport] = useState<FacultyReportItem | null>(null);
     const [reportPage, setReportPage] = useState(1);
     const reportsPerPage = 10;
 
     const fetchReports = async () => {
         try {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userInfo = authStorage.getFaculty() || {};
             const { data } = await axios.get('/api/reports', {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
@@ -51,36 +95,31 @@ const FacultyDashboard = () => {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('userInfo');
+        authStorage.removeFaculty();
         const facultyPath = import.meta.env.VITE_FACULTY_SECURE_ROUTE || 'secure-faculty-access-abc789';
         navigate(`/${facultyPath}`, { replace: true });
     };
 
     useEffect(() => {
-        const userInfo = localStorage.getItem('userInfo');
-        if (!userInfo) {
+        const parsed = authStorage.getFaculty();
+        if (!parsed || parsed.role !== 'faculty') {
             const facultyPath = import.meta.env.VITE_FACULTY_SECURE_ROUTE || 'secure-faculty-access-abc789';
             navigate(`/${facultyPath}`, { replace: true });
-        } else {
-            const parsed = JSON.parse(userInfo);
-            if (parsed.role !== 'faculty') {
-                navigate('/', { replace: true });
-                return;
-            }
-            fetchStats();
-            fetchReports();
+            return;
         }
+        fetchStats();
+        fetchReports();
     }, [navigate]);
 
     // --- View Only Sub-components ---
 
     const CaseManagement = () => {
-        const [cases, setCases] = useState<any[]>([]);
+        const [cases, setCases] = useState<FacultyCaseItem[]>([]);
         const [isLoading, setIsLoading] = useState(true);
 
         const fetchCases = async () => {
             try {
-                const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                const userInfo = authStorage.getFaculty() || {};
                 const { data } = await axios.get('/api/cases', {
                     headers: { Authorization: `Bearer ${userInfo.token}` }
                 });
@@ -100,7 +139,7 @@ const FacultyDashboard = () => {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
-                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">Case Management (Read Only)</h1>
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight">Case Management (Read Only)</h1>
                         <p className="text-gray-500 font-medium text-lg mt-1">Reviewing student incidents and monitoring profiles.</p>
                     </div>
                 </div>
@@ -113,7 +152,7 @@ const FacultyDashboard = () => {
                             <Briefcase size={60} className="mx-auto text-gray-300 mb-4" />
                             <h3 className="text-2xl font-bold text-gray-400 font-sans tracking-tight">No Active Cases Found</h3>
                         </div>
-                    ) : cases.map((c: any) => (
+                    ) : cases.map((c) => (
                         <motion.div
                             key={c._id}
                             initial={{ scale: 0.95, opacity: 0 }}
@@ -171,7 +210,7 @@ const FacultyDashboard = () => {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Student Reports (Read Only)</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Student Reports (Read Only)</h1>
                     <p className="text-gray-500 mt-1">Review documentation submitted by students.</p>
                 </div>
             </div>
@@ -179,14 +218,14 @@ const FacultyDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
                 {reports
                     .slice((reportPage - 1) * reportsPerPage, reportPage * reportsPerPage)
-                    .map((report: any, i: number) => (
+                    .map((report, i: number) => (
                         <motion.div
                             key={report._id}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: i * 0.05 }}
                             onClick={() => setSelectedViewReport(report)}
-                            className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden cursor-pointer hover:shadow-2xl hover:border-primary-main/20 transition-all group"
+                            className="bg-white p-6 rounded-4xl border border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden cursor-pointer hover:shadow-2xl hover:border-primary-main/20 transition-all group"
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-bl-full -mr-10 -mt-10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
@@ -273,10 +312,13 @@ const FacultyDashboard = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">FACULTY OVERVIEW</h1>
-                    <p className="text-gray-500 font-medium text-lg mt-1">Institutional monitoring and student welfare summary.</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight uppercase">Faculty Welfare Overview</h1>
+                    <p className="text-gray-500 font-medium text-sm sm:text-base lg:text-lg mt-1 italic">Institutional monitoring of student welfare cases and support reports.</p>
                 </div>
             </div>
+
+            {/* Visual Analytics (react-chartjs-2 Bar & Pie/Doughnut Charts) */}
+            <AnalyticsCharts stats={stats} token={authStorage.getFaculty()?.token} />
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -286,7 +328,7 @@ const FacultyDashboard = () => {
                         <div className="w-14 h-14 bg-primary-100 text-primary-main rounded-2xl flex items-center justify-center mb-6 shadow-sm">
                             <Users size={28} />
                         </div>
-                        <h3 className="text-gray-500 font-black text-xs uppercase tracking-widest mb-2">Total Students</h3>
+                        <h3 className="text-gray-500 font-black text-xs uppercase tracking-widest mb-2">Enrolled Students</h3>
                         <p className="text-4xl font-black text-gray-900">{stats.totalStudents}</p>
                     </div>
                 </div>
@@ -297,7 +339,7 @@ const FacultyDashboard = () => {
                         <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
                             <Accessibility size={28} />
                         </div>
-                        <h3 className="text-gray-500 font-black text-xs uppercase tracking-widest mb-2">PWD Monitored</h3>
+                        <h3 className="text-gray-500 font-black text-xs uppercase tracking-widest mb-2">Physical Impairment</h3>
                         <p className="text-4xl font-black text-gray-900">{stats.physicallyDisabled}</p>
                     </div>
                 </div>
@@ -308,7 +350,7 @@ const FacultyDashboard = () => {
                         <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
                             <BrainCircuit size={28} />
                         </div>
-                        <h3 className="text-gray-500 font-black text-xs uppercase tracking-widest mb-2">Mental Health Cases</h3>
+                        <h3 className="text-gray-500 font-black text-xs uppercase tracking-widest mb-2">Mental Health</h3>
                         <p className="text-4xl font-black text-gray-900">{stats.mentalHealthConcerns}</p>
                     </div>
                 </div>
@@ -319,16 +361,16 @@ const FacultyDashboard = () => {
                         <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
                             <AlertCircle size={28} />
                         </div>
-                        <h3 className="text-gray-500 font-black text-xs uppercase tracking-widest mb-2">Pending Reports</h3>
+                        <h3 className="text-gray-500 font-black text-xs uppercase tracking-widest mb-2">Emergency Reports</h3>
                         <p className="text-4xl font-black text-red-600">{stats.criticalReports}</p>
                     </div>
                 </div>
             </div>
 
             {/* Recent Activity Table */}
-            <div className="glass rounded-[3rem] border border-white/20 shadow-2xl overflow-hidden p-8">
+            <div className="glass rounded-3xl sm:rounded-[3rem] border border-white/20 shadow-2xl overflow-hidden p-5 sm:p-8">
                 <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">RECENT STUDENT REPORTS</h2>
+                    <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight uppercase">Recent Student Support Reports</h2>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -343,7 +385,7 @@ const FacultyDashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {reports.slice(0, 5).map((report: any) => (
+                            {reports.slice(0, 5).map((report) => (
                                 <tr key={report._id} className="hover:bg-gray-50/50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-gray-900 text-sm">{report.student?.studentProfile?.studentId || 'N/A'}</td>
                                     <td className="px-6 py-4 font-bold text-gray-900 text-sm">
@@ -374,55 +416,204 @@ const FacultyDashboard = () => {
         </motion.div>
     );
 
-    return (
-        <div className="min-h-screen bg-bg-light flex flex-col md:flex-row overflow-hidden font-sans">
-            <aside className="w-full md:w-64 bg-white border-r border-gray-100 flex flex-col shadow-sm hidden md:flex z-20 relative">
-                <div className="p-6 border-b border-gray-100">
+    const handleSelectTab = (tab: string) => {
+        setActiveTab(tab);
+        setIsMobileOpen(false);
+    };
+
+    const facultyNavContent = (
+        <>
+            <div className="p-6 border-b border-gray-100/60">
+                <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary-main text-white rounded-xl flex items-center justify-center font-bold text-xl shadow-md">
-                            ZC
-                        </div>
+                        <img src={guidanceLogo} alt="ZPPSU GCTSO Seal" className="w-12 h-12 sm:w-13 sm:h-13 object-cover rounded-full shadow-lg" style={{ borderRadius: '50%' }} />
                         <div>
-                            <h2 className="font-bold text-gray-900 text-lg leading-tight">ZPPSU CARES</h2>
+                            <h2 className="font-bold text-gray-900 text-lg leading-tight uppercase tracking-tight">ZPPSU CARES</h2>
                             <p className="text-[10px] text-primary-main font-bold uppercase tracking-widest">Faculty Hub</p>
                         </div>
                     </div>
-                </div>
-
-                <nav className="flex-1 p-4 space-y-2">
                     <button
-                        onClick={() => setActiveTab('dashboard')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-primary-50 text-primary-main shadow-sm border border-primary-100/50' : 'text-gray-600 hover:bg-gray-50'}`}
+                        onClick={() => setIsMobileOpen(false)}
+                        className="md:hidden p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+                        aria-label="Close menu"
                     >
-                        <LayoutDashboard size={20} /> Overview
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('cases')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${activeTab === 'cases' ? 'bg-primary-50 text-primary-main shadow-sm border border-primary-100/50' : 'text-gray-600 hover:bg-gray-50'}`}
-                    >
-                        <Briefcase size={20} /> Case Files
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('reports')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${activeTab === 'reports' ? 'bg-primary-50 text-primary-main shadow-sm border border-primary-100/50' : 'text-gray-600 hover:bg-gray-50'}`}
-                    >
-                        <Activity size={20} /> Student Reports
-                    </button>
-                </nav>
-
-                <div className="p-4 border-t border-gray-100">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl font-medium transition-colors"
-                    >
-                        <LogOut size={20} /> Secure Logout
+                        <X size={20} />
                     </button>
                 </div>
+            </div>
+
+            <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+                <button
+                    onClick={() => handleSelectTab('dashboard')}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-200 cursor-pointer ${
+                        activeTab === 'dashboard'
+                            ? 'bg-sky-50 text-sky-800 border border-sky-200/80 shadow-sm shadow-sky-500/10 translate-x-1.5 font-bold'
+                            : 'text-gray-600 border border-transparent hover:bg-sky-50/80 hover:text-sky-700 hover:border-sky-100 hover:shadow-xs hover:translate-x-1 font-semibold'
+                    }`}
+                >
+                    <div className="flex items-center gap-3">
+                        <LayoutDashboard size={20} className="shrink-0" />
+                        <span>Welfare Overview</span>
+                    </div>
+                    {activeTab === 'dashboard' && (
+                        <span className="w-1.5 h-4.5 rounded-full bg-[#87CEFA] shadow-xs shrink-0" />
+                    )}
+                </button>
+                <button
+                    onClick={() => handleSelectTab('cases')}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-200 cursor-pointer ${
+                        activeTab === 'cases'
+                            ? 'bg-sky-50 text-sky-800 border border-sky-200/80 shadow-sm shadow-sky-500/10 translate-x-1.5 font-bold'
+                            : 'text-gray-600 border border-transparent hover:bg-sky-50/80 hover:text-sky-700 hover:border-sky-100 hover:shadow-xs hover:translate-x-1 font-semibold'
+                    }`}
+                >
+                    <div className="flex items-center gap-3">
+                        <Briefcase size={20} className="shrink-0" />
+                        <span>Welfare Cases</span>
+                    </div>
+                    {activeTab === 'cases' && (
+                        <span className="w-1.5 h-4.5 rounded-full bg-[#87CEFA] shadow-xs shrink-0" />
+                    )}
+                </button>
+                <button
+                    onClick={() => handleSelectTab('reports')}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-200 cursor-pointer ${
+                        activeTab === 'reports'
+                            ? 'bg-sky-50 text-sky-800 border border-sky-200/80 shadow-sm shadow-sky-500/10 translate-x-1.5 font-bold'
+                            : 'text-gray-600 border border-transparent hover:bg-sky-50/80 hover:text-sky-700 hover:border-sky-100 hover:shadow-xs hover:translate-x-1 font-semibold'
+                    }`}
+                >
+                    <div className="flex items-center gap-3">
+                        <Activity size={20} className="shrink-0" />
+                        <span>Support Reports</span>
+                    </div>
+                    {activeTab === 'reports' && (
+                        <span className="w-1.5 h-4.5 rounded-full bg-[#87CEFA] shadow-xs shrink-0" />
+                    )}
+                </button>
+            </nav>
+
+            {/* Desktop-only institutional footer to anchor sidebar bottom */}
+            <div className="hidden md:block p-4 border-t border-gray-100/80 bg-gray-50/40">
+                <div className="flex items-center justify-between px-3 py-2.5 rounded-2xl bg-white border border-gray-100 shadow-2xs">
+                    <div className="min-w-0">
+                        <p className="text-[11px] font-black text-gray-800 uppercase tracking-wider truncate">ZPPSU • GCTSO</p>
+                        <p className="text-[10px] font-medium text-gray-400 truncate">Guidance & Counseling</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-bold text-emerald-700 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Online
+                    </span>
+                </div>
+            </div>
+
+            {/* Mobile-only footer inside slide-over drawer */}
+            <div className="md:hidden p-4 border-t border-gray-100 bg-gray-50/50 space-y-3">
+                <div className="flex items-center gap-3.5 p-3.5 bg-white rounded-2xl border border-gray-200/80 shadow-2xs">
+                    <div
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-md shadow-[#87CEFA]/40 ring-4 ring-[#87CEFA]/25 shrink-0"
+                        style={{ backgroundColor: '#87CEFA' }}
+                    >
+                        <User size={22} className="text-white drop-shadow-sm" strokeWidth={2.4} />
+                    </div>
+                    <div className="overflow-hidden">
+                        <p className="font-extrabold text-gray-900 text-sm truncate">Faculty & Counselor</p>
+                        <p className="text-[11px] text-primary-main font-black uppercase tracking-wider">GCTSO Faculty</p>
+                    </div>
+                </div>
+
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-red-50 text-red-600 hover:bg-red-100/90 hover:text-red-700 rounded-2xl font-bold transition-all duration-200 cursor-pointer group"
+                >
+                    <LogOut size={18} className="transition-transform group-hover:-translate-x-0.5" />
+                    <span>Logout</span>
+                </button>
+            </div>
+        </>
+    );
+
+    return (
+        <div className="min-h-screen bg-bg-light flex flex-col md:flex-row overflow-hidden font-sans">
+            {/* Mobile Top Header Bar */}
+            <div className="md:hidden sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-gray-200/80 px-4 py-3 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2.5">
+                    <img src={guidanceLogo} alt="ZPPSU GCTSO Seal" className="w-9 h-9 object-cover rounded-full shadow-sm" style={{ borderRadius: '50%' }} />
+                    <div>
+                        <h2 className="font-extrabold text-gray-900 text-sm leading-tight uppercase tracking-tight">ZPPSU CARES</h2>
+                        <p className="text-[9px] text-primary-main font-bold uppercase tracking-widest">Faculty Hub</p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setIsMobileOpen(true)}
+                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                    aria-label="Open navigation menu"
+                >
+                    <Menu size={20} />
+                </button>
+            </div>
+
+            {/* Mobile Slide-Over Drawer */}
+            <AnimatePresence>
+                {isMobileOpen && (
+                    <div className="md:hidden fixed inset-0 z-50 flex">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsMobileOpen(false)}
+                            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
+                        />
+                        <motion.aside
+                            initial={{ x: '-100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '-100%' }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                            className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl z-10"
+                        >
+                            {facultyNavContent}
+                        </motion.aside>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Desktop Sidebar */}
+            <aside className="hidden md:flex md:sticky md:top-0 md:h-screen w-72 shrink-0 bg-white/90 backdrop-blur-xl border-r border-gray-200/80 flex-col sidebar-elevated z-30">
+                {facultyNavContent}
             </aside>
 
-            <main className="flex-1 h-screen overflow-y-auto relative">
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary-light/40 rounded-full blur-[120px] -mr-40 -mt-40 pointer-events-none"></div>
-                <div className="p-8 md:p-12 max-w-7xl mx-auto relative z-10">
+            <main className="flex-1 min-h-screen md:h-screen overflow-y-auto relative">
+                <div className="absolute top-0 right-0 w-150 h-150 bg-primary-light/40 rounded-full blur-[120px] -mr-40 -mt-40 pointer-events-none"></div>
+                <div className="p-4 sm:p-6 lg:p-8 w-full max-w-[1680px] mx-auto relative z-10">
+                    {/* Top-Right Profile & Logout Bar (Desktop / Tablet) */}
+                    <div className="hidden md:flex items-center justify-end gap-3 mb-6">
+                        <div className="flex items-center gap-3 glass-slab px-3.5 py-2 rounded-2xl">
+                            <div
+                                className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0"
+                                style={{ backgroundColor: '#87CEFA' }}
+                            >
+                                <User size={18} className="text-white" strokeWidth={2.4} />
+                            </div>
+                            <div className="text-left min-w-0 pr-1">
+                                <p className="font-extrabold text-gray-900 text-xs leading-tight truncate">
+                                    {authStorage.getFaculty()?.firstName
+                                        ? `${authStorage.getFaculty()?.firstName} ${authStorage.getFaculty()?.lastName}`
+                                        : 'Faculty & Counselor'}
+                                </p>
+                                <p className="text-[10px] text-primary-main font-black uppercase tracking-wider truncate">
+                                    GCTSO Faculty
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-2xl font-bold text-xs transition-all cursor-pointer border border-red-100 shadow-2xs group"
+                        >
+                            <LogOut size={16} className="transition-transform group-hover:-translate-x-0.5" />
+                            <span>Logout</span>
+                        </button>
+                    </div>
+
                     <AnimatePresence mode="wait">
                         {activeTab === 'dashboard' && <DashboardOverview key="dashboard" />}
                         {activeTab === 'cases' && <CaseManagement key="cases" />}
@@ -434,19 +625,19 @@ const FacultyDashboard = () => {
             {/* Modal for Report Details */}
             <AnimatePresence>
                 {selectedViewReport && (
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
+                    <div className="fixed inset-0 z-110 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0, y: 40 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 40 }}
-                            className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl relative overflow-hidden z-10 flex flex-col max-h-[85vh] border border-white/20"
+                            className="bg-white w-full max-w-2xl rounded-3xl sm:rounded-[3.5rem] shadow-2xl relative overflow-hidden z-10 flex flex-col max-h-[85vh] border border-white/20"
                         >
-                            <div className="p-10 pb-6 border-b border-gray-100 relative">
-                                <div className="absolute top-0 right-0 w-40 h-40 bg-primary-50 rounded-bl-[5rem] -z-0"></div>
-                                <div className="flex justify-between items-start relative z-10">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-3">
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tight uppercase">{selectedViewReport.type}</h2>
+                            <div className="p-5 sm:p-10 pb-5 sm:pb-6 border-b border-gray-100 relative">
+                                <div className="absolute top-0 right-0 w-40 h-40 bg-primary-50 rounded-bl-[5rem] z-0"></div>
+                                <div className="flex justify-between items-start gap-3 relative z-10">
+                                    <div className="space-y-2 min-w-0">
+                                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                            <h2 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight uppercase">{selectedViewReport.type}</h2>
                                             <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest ${selectedViewReport.priority === 'Critical' ? 'bg-red-500 text-white' : 'bg-blue-100 text-blue-600'}`}>
                                                 {selectedViewReport.priority}
                                             </span>
@@ -469,8 +660,8 @@ const FacultyDashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
-                                <div className="grid grid-cols-2 gap-6">
+                            <div className="flex-1 overflow-y-auto p-5 sm:p-10 space-y-6 sm:space-y-10 custom-scrollbar">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                     <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Submission Status</p>
                                         <div className="flex items-center gap-2">

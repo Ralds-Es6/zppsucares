@@ -28,7 +28,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
             const decoded = jwt.verify(token, config.jwtSecret) as any as DecodedToken;
 
             let user;
-            if (decoded.role === 'admin') {
+            if (decoded.role === 'admin' || decoded.role === 'subadmin') {
                 user = await AdminUser.findById(decoded.id).select('-password');
             } else {
                 user = await MainUser.findById(decoded.id).select('-password');
@@ -51,15 +51,23 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export const adminOnly = (req: Request, res: Response, next: NextFunction) => {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'subadmin')) {
+        next();
+    } else {
+        res.status(403).json({ message: 'Not authorized as an administrator' });
+    }
+};
+
+export const superAdminOnly = (req: Request, res: Response, next: NextFunction) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
-        res.status(403).json({ message: 'Not authorized as an admin' });
+        res.status(403).json({ message: 'Permission denied: Super Administrator authority required' });
     }
 };
 
 export const staffOnly = (req: Request, res: Response, next: NextFunction) => {
-    if (req.user && (req.user.role === 'admin' || req.user.role === 'faculty')) {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'subadmin' || req.user.role === 'faculty')) {
         next();
     } else {
         res.status(403).json({ message: 'Not authorized: Staff access only' });

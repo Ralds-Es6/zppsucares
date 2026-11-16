@@ -9,6 +9,10 @@ import wellnessRoutes from './wellnessRoutes';
 import notificationRoutes from './notificationRoutes';
 import appointmentRoutes from './appointmentRoutes';
 import assistanceRoutes from './assistanceRoutes';
+import academicRoutes from './academicRoutes';
+import adminVerificationRoutes from './adminVerificationRoutes';
+import settingsRoutes from './settingsRoutes';
+import accountRoutes from './accountRoutes';
 
 const router = Router();
 
@@ -20,6 +24,10 @@ router.use('/wellness', wellnessRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/counseling', appointmentRoutes);
 router.use('/assistance', assistanceRoutes);
+router.use('/academic', academicRoutes);
+router.use('/admin/verifications', adminVerificationRoutes);
+router.use('/admin/accounts', accountRoutes);
+router.use('/settings', settingsRoutes);
 router.get('/test-stats', getAdminStats);
 router.get('/example', getExample);
 

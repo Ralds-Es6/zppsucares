@@ -66,21 +66,21 @@ const StudentReports: React.FC<StudentReportsProps> = ({
         >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight uppercase">Comprehensive Reports</h1>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight uppercase">Comprehensive Reports</h1>
                     <p className="text-gray-500 font-medium text-lg mt-1 italic">Analyze and manage all student support documentation.</p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="flex items-center gap-3 bg-white border border-gray-100 px-8 py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm">
+                    <button className="flex items-center gap-3 bg-white border border-gray-100 px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm">
                         <Download size={18} /> Export Data
                     </button>
-                    <button className="flex items-center gap-3 bg-primary-main text-white px-8 py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-primary-main/25 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+                    <button className="flex items-center gap-3 bg-primary-main text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary-main/25 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all">
                         <Plus size={18} /> Manual Report
                     </button>
                 </div>
             </div>
 
             {/* Advanced Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-6 rounded-4xl border border-gray-100 shadow-xl shadow-gray-200/40">
                 <div className="space-y-1.5">
                     <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Search Database</label>
                     <div className="relative">
@@ -162,7 +162,7 @@ const StudentReports: React.FC<StudentReportsProps> = ({
                                 transition={{ delay: i * 0.05 }}
                                 key={report._id}
                                 onClick={() => setProcessingReport(report)}
-                                className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 group hover:border-primary-main/30 hover:shadow-2xl transition-all relative overflow-hidden cursor-pointer"
+                                className="glass-slab-interactive p-6 rounded-[2.5rem] group relative overflow-hidden cursor-pointer"
                             >
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-bl-full -mr-10 -mt-10 transition-all group-hover:bg-primary-50"></div>
 
@@ -183,7 +183,7 @@ const StudentReports: React.FC<StudentReportsProps> = ({
                                     <h3 className="text-xl font-black text-gray-900 group-hover:text-primary-main transition-colors uppercase tracking-tight">
                                         {report.student?.firstName} {report.student?.lastName}
                                     </h3>
-                                    <p className="text-[10px] text-gray-400 mb-6 font-black uppercase tracking-[0.1em]">ID: {report.student?.studentProfile?.studentId || 'N/A'} • {report.type}</p>
+                                    <p className="text-[10px] text-gray-400 mb-6 font-black uppercase tracking-widest">ID: {report.student?.studentProfile?.studentId || 'N/A'} • {report.type}</p>
 
                                     <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100 mb-6 group-hover:border-primary-100 transition-colors">
                                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-100">Concern Message</p>
